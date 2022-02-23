@@ -24,7 +24,7 @@ class Environment(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     def __init__(self,
-                 num_flights: int = 10,
+                 num_flights: int = 1,
                  dt: float = 5.,
                  max_area: Optional[float] = 200. * 200.,
                  min_area: Optional[float] = 125. * 125.,
@@ -77,16 +77,21 @@ class Environment(gym.Env):
         :return:
         """
 
-        if len(action)!=len(self.flights):
-            return None
+        it2 = 0
 
         for i, f in enumerate(self.flights):
-            if i not in self.done:
-                # heading, speed
-                new_track = f.track + action[i][0] * MAX_BEARING/2
-                f.track = (new_track + u.circle) % u.circle
-                f.airspeed = (action[i][1]) * (self.max_speed - self.min_speed) + self.min_speed
 
+            if i not in self.done:
+
+                # heading, speed
+
+                new_track = f.track + action[it2][0] * MAX_BEARING/8
+
+                f.track = (new_track + u.circle) % u.circle
+
+                f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+
+                it2 += 1
         # RDC: here you should implement your resolution actions
         ##########################################################
         return None
@@ -97,11 +102,11 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -1
+        weight_a    = -50
         weight_b    = -1/5.
-        weight_c    = -1/5.
-        weight_d    = -1/5.
-        weight_e    = + 1  
+        weight_c    = 0
+        weight_d    = 0
+        weight_e    = 0  
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
@@ -147,7 +152,7 @@ class Environment(gym.Env):
         """
         
         conflicts = np.zeros(self.num_flights)
-        for i in range(self.num_flights - 1):
+        for i in range(self.num_flights):
             if i not in self.done:
                 if i in self.conflicts:
                     conflicts[i] += 1
@@ -165,7 +170,7 @@ class Environment(gym.Env):
         drift = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                drift[i] = abs(f.drift)
+                drift[i] = abs(f.drift)**2
         
         return drift
             
@@ -223,34 +228,33 @@ class Environment(gym.Env):
 
                 closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
 
-                # distance to closest #NUMBER_INTRUDERS_STATE
-                observations += np.take(distance_all[i], closest_intruders).tolist()
+                # # distance to closest #NUMBER_INTRUDERS_STATE
+                # observations += np.take(distance_all[i], closest_intruders).tolist()
 
-                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < NUMBER_INTRUDERS_STATE:
-                    observations.append(0)
+                # # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                # while len(observations) < NUMBER_INTRUDERS_STATE:
+                #     observations.append(0)
 
                 # relative bearing #NUMBER_INTRUDERS_STATE
                 observations += np.take(bearing_all[i], closest_intruders).tolist()
 
                 # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < 2*NUMBER_INTRUDERS_STATE:
+                while len(observations) < NUMBER_INTRUDERS_STATE:
                     observations.append(0)
 
-                # current bearing
-                observations.append(f.bearing)
-
+                
                 # current speed
                 observations.append(f.airspeed)
 
                 # optimal speed
                 observations.append(f.optimal_airspeed)
 
-                # distance to target
-                observations.append(f.position.distance(f.target))
+                # # distance to target
+                # observations.append(f.position.distance(f.target))
 
                 # bearing to target
-                observations.append(f.track)
+                observations.append(float(f.drift))
+                
 
                 observations_all.append(observations)
         # RDC: here you should implement your observation function
@@ -303,7 +307,7 @@ class Environment(gym.Env):
                 # get new position and advance one time step
                 f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
 
-    def step(self, action: List) -> Tuple[List, List, bool, Dict]:
+    def step(self, action: List,) -> Tuple[List, List, bool, Dict]:
         """
         Performs a simulation step
 
@@ -335,9 +339,10 @@ class Environment(gym.Env):
         # termination happens when
         # (1) all flights reached the target
         # (2) the maximum episode length is reached
-        done = (self.i == self.max_episode_len) or (len(self.done) == self.num_flights)
+        done_t = (self.i == self.max_episode_len) 
+        done_e = (len(self.done) == self.num_flights)
 
-        return obs, rew, done, {}
+        return obs, rew, done_t, done_e, {}
 
     def reset(self, number_flights_training) -> List:
         """

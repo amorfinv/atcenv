@@ -6,7 +6,7 @@ Example
 
 if __name__ == "__main__":
     import random
-    random.seed(42)
+    random.seed(52)
     from jsonargparse import ArgumentParser, ActionConfigFile
     from atcenv import Environment
     import time
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=10000)
+    parser.add_argument('--episodes', type=int, default=100000)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -34,18 +34,23 @@ if __name__ == "__main__":
     # init environment
     env = Environment(**vars(args.env))
 
-    RL = DDPG()
-    #RL = SAC()
+    #RL = DDPG()
+    RL = SAC()
 
+    load_models = False
+
+    if load_models:
+        RL.load_models()
     # increase number of flights
 
     # run episodes
+    
     for e in tqdm(range(args.episodes)):        
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
         # train with an increasing number of aircraft
-        number_of_aircraft = min(int(e/100)+1,10)
+        number_of_aircraft = min(int(e/1000)+2,10)
         obs = env.reset(number_of_aircraft)
 
         # set done status to false
@@ -55,35 +60,45 @@ if __name__ == "__main__":
         number_steps_until_done = 0
         # save how many conflics happened in eacj episode
         number_conflicts = 0
-
+        tot_rew = 0
         # execute one episode
         while not done:
             # get actions from RL model
             actions = []
             for obs_i in obs:
-                actions.append(RL.do_step(obs_i, episode_name, env.max_speed, env.min_speed))
+                actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed))
 
             obs0 = copy.deepcopy(obs)
 
             # perform step with dummy action
-            obs, rew, done, info = env.step(actions)
+            obs, rew, done_t, done_e, info = env.step(actions, obs0)
 
+            if done_t or done_e:
+                done = True
+
+            tot_rew += rew
             # train the RL model
             for it_obs in range(len(obs)):
-                RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
+                RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
 
             # comment render out for faster processing
-            #env.render()
+            if e%25 == 0:
+                env.render()
+                time.sleep(0.01)
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)
-            #time.sleep(0.05)
+
+            
+                
 
         # save information
-        #RL.update() # train the model
-        RL.episode_end(episode_name)
+        RL.learn() # train the model
+        if e%100 == 0:
+            RL.save_models()
+        #RL.episode_end(episode_name)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft)        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, reward=', tot_rew)        
 
         # close rendering
         env.close()
