@@ -14,9 +14,9 @@ MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
 class SAC:
-    def __init__(self, alpha=0.00006, beta=0.00006, input_dims=[8],
+    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[3],
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=10):
+            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=2):
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
@@ -39,7 +39,7 @@ class SAC:
         self.update_network_parameters(tau=1)
 
     def do_step(self, observation, max_speed, min_speed, test = False):
-        state = self.normalizeState(observation,max_speed,min_speed)
+        
         state = tf.convert_to_tensor([observation])
         actions, _ = self.actor.sample_normal(state, reparameterize=False, test=test)
 
@@ -148,19 +148,19 @@ class SAC:
         #     s_t[i] = s_t[i]/MAX_DISTANCE
 
         # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
-        for i in range(0, NUMBER_INTRUDERS_STATE):
-            s_t[i] = s_t[i]/MAX_BEARING
+        # for i in range(0, NUMBER_INTRUDERS_STATE):
+        #     s_t[i] = s_t[i]/MAX_BEARING
 
         # current bearing
         
         # current speed
-        s_t[NUMBER_INTRUDERS_STATE + 0] = ((s_t[NUMBER_INTRUDERS_STATE + 0]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[0] = ((s_t[0]-min_speed)/(max_speed-min_speed))*2 - 1
         # optimal speed
-        s_t[NUMBER_INTRUDERS_STATE + 1] = ((s_t[NUMBER_INTRUDERS_STATE + 1]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[1] = ((s_t[1]-min_speed)/(max_speed-min_speed))*2 - 1
         # # distance to target
         # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # # bearing to target
-        # s_t[NUMBER_INTRUDERS_STATE*2 + 3] = s_t[NUMBER_INTRUDERS_STATE*2 + 3]/MAX_BEARING
+        s_t[2] = s_t[2]/MAX_BEARING
 
         # s_t[0] = s_t[0]/MAX_BEARING
 

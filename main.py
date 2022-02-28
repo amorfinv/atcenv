@@ -2,7 +2,7 @@
 Example
 """
 
-
+import numpy as np
 
 if __name__ == "__main__":
     import random
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=50)
+    parser.add_argument('--episodes', type=int, default=1000)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     if load_models:
         RL.load_models()
     # increase number of flights
-
+    tot_rew_list = []
     # run episodes
     state_list = []
     for e in tqdm(range(args.episodes)):        
@@ -52,7 +52,8 @@ if __name__ == "__main__":
         # train with an increasing number of aircraft
         number_of_aircraft = 5 #min(int(e/1000)+2,10)
         obs = env.reset(number_of_aircraft)
-
+        for obs_i in obs:
+            RL.normalizeState(obs_i, env.max_speed, env.min_speed)
         # set done status to false
         done = False
 
@@ -73,6 +74,9 @@ if __name__ == "__main__":
             # perform step with dummy action
             obs, rew, done_t, done_e, info = env.step(actions)
 
+            for obs_i in obs:
+                RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+
             if done_t or done_e:
                 done = True
 
@@ -92,7 +96,10 @@ if __name__ == "__main__":
 
             
                 
-
+        if len(tot_rew_list) < 100:
+            tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
+        else:
+            tot_rew_list[e%100 + 1] = sum(tot_rew)/number_of_aircraft
         # save information
         RL.learn() # train the model
         if e%100 == 0:
@@ -101,7 +108,7 @@ if __name__ == "__main__":
         np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, reward=', tot_rew)        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
 
         # close rendering
         env.close()

@@ -102,8 +102,8 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -50
-        weight_b    = -1/5.
+        weight_a    = 0
+        weight_b    = 1/5.
         weight_c    = 0
         weight_d    = 0
         weight_e    = 0  
@@ -170,7 +170,7 @@ class Environment(gym.Env):
         drift = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                drift[i] = abs(f.drift)**2
+                drift[i] = 0.5 - abs(f.drift)
         
         return drift
             
@@ -226,21 +226,21 @@ class Environment(gym.Env):
             if i not in self.done:
                 observations = []
 
-                closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
+                # closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
 
-                # # distance to closest #NUMBER_INTRUDERS_STATE
-                # observations += np.take(distance_all[i], closest_intruders).tolist()
+                # # # distance to closest #NUMBER_INTRUDERS_STATE
+                # # observations += np.take(distance_all[i], closest_intruders).tolist()
+
+                # # # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                # # while len(observations) < NUMBER_INTRUDERS_STATE:
+                # #     observations.append(0)
+
+                # # relative bearing #NUMBER_INTRUDERS_STATE
+                # observations += np.take(bearing_all[i], closest_intruders).tolist()
 
                 # # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
                 # while len(observations) < NUMBER_INTRUDERS_STATE:
                 #     observations.append(0)
-
-                # relative bearing #NUMBER_INTRUDERS_STATE
-                observations += np.take(bearing_all[i], closest_intruders).tolist()
-
-                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < NUMBER_INTRUDERS_STATE:
-                    observations.append(0)
 
                 
                 # current speed
