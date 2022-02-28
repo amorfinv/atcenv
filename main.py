@@ -24,7 +24,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=100000)
+    parser.add_argument('--episodes', type=int, default=50)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -44,13 +44,13 @@ if __name__ == "__main__":
     # increase number of flights
 
     # run episodes
-    
+    state_list = []
     for e in tqdm(range(args.episodes)):        
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
         # train with an increasing number of aircraft
-        number_of_aircraft = min(int(e/1000)+2,10)
+        number_of_aircraft = 5 #min(int(e/1000)+2,10)
         obs = env.reset(number_of_aircraft)
 
         # set done status to false
@@ -71,11 +71,13 @@ if __name__ == "__main__":
             obs0 = copy.deepcopy(obs)
 
             # perform step with dummy action
-            obs, rew, done_t, done_e, info = env.step(actions, obs0)
+            obs, rew, done_t, done_e, info = env.step(actions)
 
             if done_t or done_e:
                 done = True
 
+            for obs_i in obs:
+                state_list.append(obs_i)
             tot_rew += rew
             # train the RL model
             for it_obs in range(len(obs)):
@@ -96,6 +98,7 @@ if __name__ == "__main__":
         if e%100 == 0:
             RL.save_models()
         #RL.episode_end(episode_name)
+        np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
         print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, reward=', tot_rew)        
