@@ -14,11 +14,11 @@ MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
 class SAC:
-    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[3],
+    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[4],
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=2):
+            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=10):
         self.gamma = gamma
-        self.tau = tau
+        self.tau = taus
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
         self.batch_size = batch_size
         self.n_actions = n_actions
@@ -160,7 +160,8 @@ class SAC:
         # # distance to target
         # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # # bearing to target
-        s_t[2] = s_t[2]/MAX_BEARING
+        s_t[2] = s_t[2]
+        s_t[3] = s_t[3]
 
         # s_t[0] = s_t[0]/MAX_BEARING
 

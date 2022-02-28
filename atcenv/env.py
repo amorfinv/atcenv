@@ -6,7 +6,7 @@ from typing import Dict, List
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
-
+import math as m
 # our own packages
 import numpy as np
 
@@ -253,8 +253,8 @@ class Environment(gym.Env):
                 # observations.append(f.position.distance(f.target))
 
                 # bearing to target
-                observations.append(float(f.drift))
-                
+                observations.append(m.sin(float(f.drift)))
+                observations.append(m.cos(float(f.drift)))
 
                 observations_all.append(observations)
         # RDC: here you should implement your observation function

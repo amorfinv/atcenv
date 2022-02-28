@@ -76,16 +76,12 @@ class ActorNetwork(keras.Model):
         sigma = self.sigma(prob)
         # might want to come back and change this, perhaps tf plays more nicely with
         # a sigma of ~0
-        # sigma = tf.clip_by_value(sigma, self.noise, 1)
-        sigma = tf.clip_by_value(sigma, self.noise, 0.05)
-        # sigma = tf.clip_by_value(sigma, -20, -10)
-
+        sigma = tf.clip_by_value(sigma, self.noise, 1)
 
         return mu, sigma
 
-    def sample_normal(self, state, reparameterize=True, test = False):
+    def sample_normal(self, state, reparameterize=True, test= False):
         mu, sigma = self.call(state)
-        
         probabilities = tfp.distributions.Normal(mu, sigma)
 
         if reparameterize:
@@ -93,15 +89,9 @@ class ActorNetwork(keras.Model):
         else:
             actions = probabilities.sample()
 
-        # print('mu:', mu)
-        # print('sigma: ', sigma)
-        # print('actions: ', actions)
-
         action = tf.math.tanh(actions)*self.max_action
         log_probs = probabilities.log_prob(actions)
         log_probs -= tf.math.log(1-tf.math.pow(action,2)+self.noise)
         log_probs = tf.math.reduce_sum(log_probs, axis=1, keepdims=True)
-        
-        if test:
-            return tf.math.tanh(mu)*self.max_action, log_probs
+
         return action, log_probs

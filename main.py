@@ -67,6 +67,7 @@ if __name__ == "__main__":
             # get actions from RL model
             actions = []
             for obs_i in obs:
+                # print(obs_i)
                 actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed))
 
             obs0 = copy.deepcopy(obs)
@@ -86,7 +87,7 @@ if __name__ == "__main__":
             # train the RL model
             for it_obs in range(len(obs)):
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
-
+                # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
             if e%25 == 0:
                 env.render()
@@ -99,7 +100,7 @@ if __name__ == "__main__":
         if len(tot_rew_list) < 100:
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
         else:
-            tot_rew_list[e%100 + 1] = sum(tot_rew)/number_of_aircraft
+            tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
         # save information
         RL.learn() # train the model
         if e%100 == 0:
