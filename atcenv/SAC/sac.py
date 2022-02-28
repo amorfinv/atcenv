@@ -18,7 +18,7 @@ class SAC:
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
             layer1_size=256, layer2_size=256, batch_size=256, reward_scale=10):
         self.gamma = gamma
-        self.tau = taus
+        self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
         self.batch_size = batch_size
         self.n_actions = n_actions
