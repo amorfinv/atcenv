@@ -16,7 +16,7 @@ BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
-NUMBER_INTRUDERS_STATE = 5
+NUMBER_INTRUDERS_STATE = 1
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = 2*math.pi
 
@@ -102,7 +102,7 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = 0
+        weight_a    = -10
         weight_b    = 1/5.
         weight_c    = 0
         weight_d    = 0
@@ -204,16 +204,19 @@ class Environment(gym.Env):
         # bearing to target
 
         observations_all = []
-
+        cur_dis     = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
         distance_all = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
         bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING
-
+        dx_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
+        dy_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
         for i in range(self.num_flights):
             if i not in self.done:
                 for j in range(self.num_flights):
                     if j not in self.done and j != i:
                         # predicted used instead of position, so ownship can work in regard to future position and still
                         # avoid a future conflict
+                        cur_dis[i][j] = self.flights[i].position.distance(self.flights[j].position)
+
                         distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
 
                         # bearing
@@ -222,25 +225,43 @@ class Environment(gym.Env):
                         compass = math.atan2(dx, dy)
                         bearing_all[i][j] = (compass + u.circle) % u.circle
 
+                        dx_all[i][j] = self.flights[i].position.x - self.flights[j].position.x
+                        dy_all[i][j]  = self.flights[i].position.y - self.flights[j].position.y
+
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 observations = []
 
-                # closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
+                closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
 
-                # # # distance to closest #NUMBER_INTRUDERS_STATE
-                # # observations += np.take(distance_all[i], closest_intruders).tolist()
+                # distance to closest #NUMBER_INTRUDERS_STATE
+                observations += np.take(cur_dis[i], closest_intruders).tolist()
 
-                # # # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                # # while len(observations) < NUMBER_INTRUDERS_STATE:
-                # #     observations.append(0)
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
+                
+                observations += np.take(distance_all[i], closest_intruders).tolist()
 
-                # # relative bearing #NUMBER_INTRUDERS_STATE
-                # observations += np.take(bearing_all[i], closest_intruders).tolist()
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < 2*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
 
-                # # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                # while len(observations) < NUMBER_INTRUDERS_STATE:
-                #     observations.append(0)
+                # relative bearing #NUMBER_INTRUDERS_STATE
+                observations += np.take(dx_all[i], closest_intruders).tolist()
+
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < 3*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
+
+                observations += np.take(dy_all[i], closest_intruders).tolist()
+
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < 4*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
+                
+                
+                
 
                 
                 # current speed
