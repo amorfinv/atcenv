@@ -33,7 +33,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # init environment
-    env = Environment(**vars(args.env))
+    env_args = vars(args.env)
+    env_args['altitude'] = 0 # in meters
+    env = Environment(**env_args)
 
     RL = DDPG()
     #RL = SAC()
