@@ -24,7 +24,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=1000)
+    parser.add_argument('--episodes', type=int, default=10000)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -43,6 +43,7 @@ if __name__ == "__main__":
         RL.load_models()
     # increase number of flights
     tot_rew_list = []
+    conf_list = []
     # run episodes
     state_list = []
     for e in tqdm(range(args.episodes)):        
@@ -50,7 +51,7 @@ if __name__ == "__main__":
 
         # reset environment
         # train with an increasing number of aircraft
-        number_of_aircraft = 5 #min(int(e/1000)+2,10)
+        number_of_aircraft = 10 #min(int(e/1000)+2,10)
         obs = env.reset(number_of_aircraft)
         for obs_i in obs:
             RL.normalizeState(obs_i, env.max_speed, env.min_speed)
@@ -69,6 +70,8 @@ if __name__ == "__main__":
             for obs_i in obs:
                 # print(obs_i)
                 actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed))
+                # actions.append((np.random.rand(2)-0.5)*2)
+                # actions.append([0,0])
 
             obs0 = copy.deepcopy(obs)
 
@@ -89,7 +92,7 @@ if __name__ == "__main__":
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
-            if e%25 == 0:
+            if e%50 == 0:
                 env.render()
                 time.sleep(0.01)
             number_steps_until_done += 1
@@ -99,8 +102,10 @@ if __name__ == "__main__":
                 
         if len(tot_rew_list) < 100:
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
+            conf_list.append(number_conflicts)
         else:
             tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
+            conf_list[e%100 -1] = number_conflicts
         # save information
         RL.learn() # train the model
         if e%100 == 0:
@@ -109,7 +114,7 @@ if __name__ == "__main__":
         np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
 
         # close rendering
         env.close()

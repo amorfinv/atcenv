@@ -9,14 +9,17 @@ from atcenv.SAC.networks import ActorNetwork, CriticNetwork, ValueNetwork
 import atcenv.units as u
 import math
 
-NUMBER_INTRUDERS_STATE = 5
+NUMBER_INTRUDERS_STATE = 1
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
+MEANS = [57000,57000,1300,-1500,0,0,0,0]
+STDS = [31500,31500,46000,46000,1,1,1,1]
+
 class SAC:
-    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[4],
+    def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[8],
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=10):
+            layer1_size=256, layer2_size=256, batch_size=1024, reward_scale=10):
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
@@ -144,24 +147,32 @@ class SAC:
     
     def normalizeState(self, s_t, max_speed, min_speed):
          # distance to closest #NUMBER_INTRUDERS_STATE intruders
-        # for i in range(0, NUMBER_INTRUDERS_STATE):
-        #     s_t[i] = s_t[i]/MAX_DISTANCE
+        for i in range(0, NUMBER_INTRUDERS_STATE):
+            s_t[i] = (s_t[i]-MEANS[0])/(STDS[0]*2)
 
         # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
-        # for i in range(0, NUMBER_INTRUDERS_STATE):
-        #     s_t[i] = s_t[i]/MAX_BEARING
+        for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
+            s_t[i] = (s_t[i]-MEANS[1])/(STDS[1]*2)
+
+        for i in range(NUMBER_INTRUDERS_STATE*2, NUMBER_INTRUDERS_STATE*3):
+            s_t[i] = (s_t[i]-MEANS[2])/(STDS[2]*2)
+        
+        for i in range(NUMBER_INTRUDERS_STATE*3, NUMBER_INTRUDERS_STATE*4):
+            s_t[i] = (s_t[i]-MEANS[3])/(STDS[3]*2)
+
+
 
         # current bearing
         
         # current speed
-        s_t[0] = ((s_t[0]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*4] = ((s_t[NUMBER_INTRUDERS_STATE*4]-min_speed)/(max_speed-min_speed))*2 - 1
         # optimal speed
-        s_t[1] = ((s_t[1]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*4 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*4 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
         # # distance to target
         # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # # bearing to target
-        s_t[2] = s_t[2]
-        s_t[3] = s_t[3]
+        s_t[NUMBER_INTRUDERS_STATE*4+2] = s_t[NUMBER_INTRUDERS_STATE*4+2]
+        s_t[NUMBER_INTRUDERS_STATE*4+3] = s_t[NUMBER_INTRUDERS_STATE*4+3]
 
         # s_t[0] = s_t[0]/MAX_BEARING
 
