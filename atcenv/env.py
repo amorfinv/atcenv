@@ -31,7 +31,8 @@ class Environment(gym.Env):
                  max_speed: Optional[float] = 500.,
                  min_speed: Optional[float] = 400,
                  max_episode_len: Optional[int] = 300,
-                 min_distance: Optional[float] = 5.,
+                 min_distance_horizontal: Optional[float] = 5.,
+                 min_distance_vertical: Optional[float] = 1000,
                  distance_init_buffer: Optional[float] = 5.,
                  **kwargs):
         """
@@ -53,7 +54,8 @@ class Environment(gym.Env):
         self.min_area = min_area * (u.nm ** 2)
         self.max_speed = max_speed * u.kt
         self.min_speed = min_speed * u.kt
-        self.min_distance = min_distance * u.nm
+        self.min_distance_horizontal = min_distance_horizontal * u.nm
+        self.min_distance_vertical = min_distance_vertical * u.ft
         self.max_episode_len = max_episode_len
         self.distance_init_buffer = distance_init_buffer
         self.dt = dt
@@ -188,7 +190,7 @@ class Environment(gym.Env):
                         distance = dist_between_flights(self.flights[i], self.flights[j])
                         distances = np.append(distances,distance)
                     #conflict severity on a scale of 0-1
-                    severity[i] = -1.*((min(distances)-self.min_distance)/self.min_distance)
+                    severity[i] = -1.*((min(distances)-self.min_distance_horizontal)/self.min_distance_horizontal)
         
         return severity
 
@@ -278,8 +280,9 @@ class Environment(gym.Env):
             if i not in self.done:
                 for j in range(i + 1, self.num_flights):
                     if j not in self.done:
-                        distance = dist_between_flights(self.flights[i], self.flights[j])
-                        if distance < self.min_distance:
+                        distance_horizontal = self.flights[i].position.distance(self.flights[j].position)
+                        distance_vertical = self.flights[i].position.vdistance(self.flights[j].position)
+                        if distance_horizontal < self.min_distance_horizontal and distance_vertical < self.min_distance_vertical:
                             self.conflicts.update((i, j))
 
     def update_done(self) -> None:
@@ -360,14 +363,14 @@ class Environment(gym.Env):
         # create random flights
         self.flights = []
         tol = self.distance_init_buffer * self.tol
-        min_distance = self.distance_init_buffer * self.min_distance
+        min_distance = self.distance_init_buffer * self.min_distance_horizontal
         while len(self.flights) < self.num_flights:
             valid = True
             candidate = Flight.random(self.airspace, self.min_speed, self.max_speed, tol, self.alt)
 
             # ensure that candidate is not in conflict
             for f in self.flights:
-                if dist_between_flights(candidate,f) < min_distance:
+                if candidate.position.distance(f.position) < min_distance:  # all flights start at the same altitude
                     valid = False
                     break
             if valid:
@@ -422,7 +425,7 @@ class Environment(gym.Env):
             else:
                 color = BLUE
 
-            circle = rendering.make_circle(radius=self.min_distance / 2.0,
+            circle = rendering.make_circle(radius=self.min_distance_horizontal / 2.0,
                                            res=10,
                                            filled=False)
             circle.add_attr(rendering.Transform(translation=(f.position.x,
@@ -446,7 +449,6 @@ class Environment(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
-
 
 def dist_between_flights(f1: Flight, f2: Flight) -> float:
     """

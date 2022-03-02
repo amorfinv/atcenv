@@ -67,8 +67,9 @@ class ActorNetwork(object):
         init1 = tf.keras.initializers.RandomNormal(mean=0, stddev=1 / np.sqrt(state_size), seed=20)
         act1 = tf.keras.layers.Dense(1, activation='tanh', kernel_initializer=init1)(h1)
         act2 = tf.keras.layers.Dense(1, activation='sigmoid', kernel_initializer=init1)(h1)
+        act3 = tf.keras.layers.Dense(1, activation='sigmoid', kernel_initializer=init1)(h1)
 
-        output = tf.keras.layers.concatenate([act1, act2])
+        output = tf.keras.layers.concatenate([act1, act2,act3])
         model = tf.keras.Model(inputs=state_input, outputs=output)
 
         return model, model.trainable_weights, state_input
