@@ -281,7 +281,8 @@ class Environment(gym.Env):
                 for j in range(i + 1, self.num_flights):
                     if j not in self.done:
                         distance_horizontal = self.flights[i].position.distance(self.flights[j].position)
-                        distance_vertical = self.flights[i].position.vdistance(self.flights[j].position)
+                        distance_vertical = dist_between_flights(self.flights[i], self.flights[j], opt='v')
+                        print(distance_vertical)
                         if distance_horizontal < self.min_distance_horizontal and distance_vertical < self.min_distance_vertical:
                             self.conflicts.update((i, j))
 
@@ -450,13 +451,22 @@ class Environment(gym.Env):
             self.viewer.close()
             self.viewer = None
 
-def dist_between_flights(f1: Flight, f2: Flight) -> float:
+def dist_between_flights(f1: Flight, f2: Flight, opt: str = 't') -> float:
     """
     Computes the distance between two flights
     :param f1: first flight
     :param f2: second flight
+    :param opt: distance option (t,h,v)
     :return: distance
     """
     f1_x, f1_y, f1_z = f1.position.x, f1.position.y, f1.position.z
     f2_x, f2_y, f2_z = f2.position.x, f2.position.y, f2.position.z
-    return math.sqrt((f1_x - f2_x) ** 2 + (f1_y - f2_y) ** 2 + (f1_z - f2_z) ** 2)
+
+    if opt == 't':
+        return math.sqrt((f1_x - f2_x) ** 2 + (f1_y - f2_y) ** 2 + (f1_z - f2_z) ** 2)
+    elif opt == 'h':
+        return f1.position.distance(f2.position)
+    elif opt == 'v':
+        return abs(f1_z - f2_z)
+    else:
+        raise ValueError(f'"{opt}" is an invalid option')
