@@ -89,8 +89,7 @@ class Environment(gym.Env):
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
-                # TODO: fix this action climb angle
-                f.climb = action[it2][2]
+                f.altitude = action[it2][2]
                 it2 +=1
 
         # RDC: here you should implement your resolution actions
@@ -128,8 +127,8 @@ class Environment(gym.Env):
         target = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                distance = f.totaldistance
-                if distance < self.tol:
+                distance = f.position.distance(f.target)
+                if distance < self.tol and f.altitude == self.alt:
                     target[i] = 1
                     
         return target
@@ -180,6 +179,9 @@ class Environment(gym.Env):
         ...
 
     def conflict_severity(self):
+        """
+        :return: numpy array with the severity of each conflict
+        """
         
         severity = np.zeros(self.num_flights)
         for i in range(self.num_flights - 1):
@@ -187,7 +189,7 @@ class Environment(gym.Env):
                 if i in self.conflicts:
                     distances = np.array([])
                     for j in list(self.conflicts - {i}):
-                        distance = dist_between_flights(self.flights[i], self.flights[j])
+                        distance = self.flights[i].position.distance(self.flights[j].position)
                         distances = np.append(distances,distance)
                     #conflict severity on a scale of 0-1
                     severity[i] = -1.*((min(distances)-self.min_distance_horizontal)/self.min_distance_horizontal)
@@ -219,15 +221,13 @@ class Environment(gym.Env):
                     if j not in self.done and j != i:
                         # predicted used instead of position, so ownship can work in regard to future position and still
                         # avoid a future conflict
-                        # TODO: extend this check for 3D Distance
-                        distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
+                        h_distance = self.flights[i].prediction.distance(self.flights[j].prediction)
+                        distance_all[i][j] = h_distance if f.altitude == self.alt else MAX_DISTANCE
                         # relative bearing
                         dx = self.flights[i].prediction.x - self.flights[j].prediction.x
                         dy = self.flights[i].prediction.y - self.flights[j].prediction.y
                         compass = math.atan2(dx, dy)
                         bearing_all[i][j] = (compass + u.circle) % u.circle
-
-                        # TODO: extend this check for 3D? include a relative climb angle?
 
         for i, f in enumerate(self.flights):
             if i not in self.done:
@@ -280,10 +280,8 @@ class Environment(gym.Env):
             if i not in self.done:
                 for j in range(i + 1, self.num_flights):
                     if j not in self.done:
-                        distance_horizontal = self.flights[i].position.distance(self.flights[j].position)
-                        distance_vertical = dist_between_flights(self.flights[i], self.flights[j], opt='v')
-                        print(distance_vertical)
-                        if distance_horizontal < self.min_distance_horizontal and distance_vertical < self.min_distance_vertical:
+                        h_distance = self.flights[i].position.distance(self.flights[j].position)
+                        if h_distance < self.min_distance_horizontal and self.flights[i].altitude == self.flights[j].altitude:
                             self.conflicts.update((i, j))
 
     def update_done(self) -> None:
@@ -293,8 +291,8 @@ class Environment(gym.Env):
         """
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                distance = f.totaldistance
-                if distance < self.tol:
+                distance = f.position.distance(f.target)
+                if distance < self.tol and f.altitude == self.alt:
                     self.done.add(i)
 
     def update_positions(self) -> None:
@@ -306,13 +304,15 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # get current speed components
-                dx, dy, dz = f.components
+                dx, dy = f.components
 
                 # get current position
                 position = f.position
 
                 # get new position and advance one time step
-                f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt, position.z + dz * self.dt)
+                f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
+
+                # note that altitude is updated in resolution
 
     def step(self, action: List) -> Tuple[List, List, bool, Dict]:
         """
@@ -459,8 +459,8 @@ def dist_between_flights(f1: Flight, f2: Flight, opt: str = 't') -> float:
     :param opt: distance option (t,h,v)
     :return: distance
     """
-    f1_x, f1_y, f1_z = f1.position.x, f1.position.y, f1.position.z
-    f2_x, f2_y, f2_z = f2.position.x, f2.position.y, f2.position.z
+    f1_x, f1_y, f1_z = f1.position.x, f1.position.y, f1.altitude
+    f2_x, f2_y, f2_z = f2.position.x, f2.position.y, f2.altitude
 
     if opt == 't':
         return math.sqrt((f1_x - f2_x) ** 2 + (f1_y - f2_y) ** 2 + (f1_z - f2_z) ** 2)

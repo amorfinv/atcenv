@@ -52,10 +52,10 @@ class Flight:
     position: Point
     target: Point
     optimal_airspeed: float
+    altitude: int
 
     airspeed: float = field(init=False)
     track: float = field(init=False)
-    climb: float = field(init=False)
 
     def __post_init__(self) -> None:
         """
@@ -64,7 +64,6 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
-        self.climb = self.zenith
 
     @property
     def bearing(self) -> float:
@@ -96,8 +95,8 @@ class Flight:
         :param dt: prediction look-ahead time (in seconds)
         :return:
         """
-        dx, dy, dz = self.components
-        return Point([self.position.x + dx * dt, self.position.y + dy * dt, self.position.z + dz * dt])
+        dx, dy= self.components
+        return Point([self.position.x + dx * dt, self.position.y + dy * dt])
 
     @property
     def components(self) -> Tuple:
@@ -105,10 +104,9 @@ class Flight:
         X, Y, and Z Speed components (in kt)
         :return: speed components
         """
-        dx = self.airspeed * math.sin(self.track) * math.cos(self.climb)
-        dy = self.airspeed * math.cos(self.track) * math.cos(self.climb)
-        dz = self.airspeed * math.sin(self.climb)
-        return dx, dy, dz
+        dx = self.airspeed * math.sin(self.track)
+        dy = self.airspeed * math.cos(self.track)
+        return dx, dy
 
     @property
     def distance(self) -> float:
@@ -125,9 +123,9 @@ class Flight:
         :return: total distance to the target
         """
         # get x,y,z of current position
-        x, y, z = self.position.x, self.position.y, self.position.z
+        x, y, z = self.position.x, self.position.y, self.altitude
         # get x,y,z of target position
-        tx, ty, tz = self.target.x, self.target.y, self.target.z
+        tx, ty, tz = self.target.x, self.target.y, 0
         # calculate distance
         return math.sqrt((tx - x) ** 2 + (ty - y) ** 2 + (tz - z) ** 2)
 
@@ -137,7 +135,7 @@ class Flight:
         Current vertical distance to the target (in meters)
         :return: vertical distance to the target
         """
-        return abs(self.target.z - self.position.z)
+        return abs(self.altitude - 0)
 
     @property
     def drift(self) -> float:
@@ -157,22 +155,14 @@ class Flight:
     @property
     def vdrift(self) -> float:
         """
-        Drift angle (difference between climb and zenith) to the target
+        Vertical drift angle to the target.
         :return:
         """
-        # TODO: check this angle calc for 3d
-        vdrift = self.zenith - self.climb
-
-        if vdrift > math.pi:
-            return -(u.circle - vdrift)
-        elif vdrift < -math.pi:
-            return (u.circle + vdrift)
-        else:
-            return vdrift
+        return math.atan2(self.altitude, self.distance)
 
     @classmethod
     def random(cls, airspace: Airspace, min_speed: float,
-                max_speed: float, tol: float = 0., alt: float = 0.0):
+                max_speed: float, tol: float = 0., altitude: float = 0.0):
         """
         Creates a random flight
 
@@ -185,7 +175,7 @@ class Flight:
         def random_point_in_polygon(polygon: Polygon) -> Point:
             minx, miny, maxx, maxy = polygon.bounds
             while True:
-                point = Point(random.uniform(minx, maxx), random.uniform(miny, maxy), alt)
+                point = Point(random.uniform(minx, maxx), random.uniform(miny, maxy))
                 if polygon.contains(point):
                     return point
 
@@ -200,11 +190,11 @@ class Flight:
             if target2d.distance(position) > tol:
                 break
         # add vertical component to target2d
-        target = Point(target2d.x, target2d.y, alt)
+        target = Point(target2d.x, target2d.y)
 
         # random speed
         airspeed = random.uniform(min_speed, max_speed)
 
-        return cls(position, target, airspeed)
+        return cls(position, target, airspeed, altitude)
 
 
