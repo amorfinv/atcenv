@@ -3,6 +3,7 @@ Example
 """
 
 import numpy as np
+import tracemalloc
 
 if __name__ == "__main__":
     import random
@@ -30,6 +31,7 @@ if __name__ == "__main__":
 
     # parse arguments
     args = parser.parse_args()
+    #tracemalloc.start()
 
     # init environment
     env = Environment(**vars(args.env))
@@ -37,7 +39,8 @@ if __name__ == "__main__":
     #RL = DDPG()
     RL = SAC()
 
-    load_models = False
+    load_models = True
+    test = True
 
     if load_models:
         RL.load_models()
@@ -46,12 +49,13 @@ if __name__ == "__main__":
     conf_list = []
     # run episodes
     state_list = []
-    for e in tqdm(range(args.episodes)):        
+    for e in tqdm(range(args.episodes)):   
+        #snapshot1 = tracemalloc.take_snapshot()     
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
         # train with an increasing number of aircraft
-        number_of_aircraft = 10 #min(int(e/1000)+2,10)
+        number_of_aircraft = 10 #min(int(e/500)+5,10)
         obs = env.reset(number_of_aircraft)
         for obs_i in obs:
             RL.normalizeState(obs_i, env.max_speed, env.min_speed)
@@ -69,7 +73,7 @@ if __name__ == "__main__":
             actions = []
             for obs_i in obs:
                 # print(obs_i)
-                actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed))
+                actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed, test=test))
                 # actions.append((np.random.rand(2)-0.5)*2)
                 # actions.append([0,0])
 
@@ -92,7 +96,7 @@ if __name__ == "__main__":
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
-            if e%50 == 0:
+            if e%25 == 0:
                 env.render()
                 time.sleep(0.01)
             number_steps_until_done += 1
@@ -107,7 +111,8 @@ if __name__ == "__main__":
             tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
             conf_list[e%100 -1] = number_conflicts
         # save information
-        RL.learn() # train the model
+        if not test:
+            RL.learn() # train the model
         if e%100 == 0:
             RL.save_models()
         #RL.episode_end(episode_name)
@@ -115,6 +120,11 @@ if __name__ == "__main__":
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
         print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
+        #snapshot2 = tracemalloc.take_snapshot()
+        #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
 
+        #print("[ Top 10 differences ]")
+        #for stat in top_stats[:10]:
+        #    print(stat)
         # close rendering
         env.close()
