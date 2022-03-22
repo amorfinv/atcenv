@@ -65,19 +65,23 @@ class ActorNetwork(keras.Model):
 
         self.fc1 = Dense(self.fc1_dims, activation='relu')
         self.fc2 = Dense(self.fc2_dims, activation='relu')
-        self.mu = Dense(self.n_actions, activation=None)
+
+        self.mean = Dense(self.n_actions, activation=None)  
         self.sigma = Dense(self.n_actions, activation=None)
+        
 
     def call(self, state):
         prob = self.fc1(state)
         prob = self.fc2(prob)
 
-        mu = self.mu(prob)
+
+        mu = self.mean(prob)
         sigma = self.sigma(prob)
+        
         # might want to come back and change this, perhaps tf plays more nicely with
         # a sigma of ~0
         sigma = tf.clip_by_value(sigma, self.noise, 1)
-
+        
         return mu, sigma
 
     def sample_normal(self, state, reparameterize=True, test= False):
@@ -90,8 +94,9 @@ class ActorNetwork(keras.Model):
             actions = probabilities.sample()
 
         action = tf.math.tanh(actions)*self.max_action
-        log_probs = probabilities.log_prob(actions)
-        log_probs -= tf.math.log(1-tf.math.pow(action,2)+self.noise)
+        log_probs = probabilities.log_prob(actions) # potential target
+        log_probs -= tf.math.log(1-tf.math.pow(action,2)+self.noise) #potential target twice
         log_probs = tf.math.reduce_sum(log_probs, axis=1, keepdims=True)
-
+        if test:
+            return mu, log_probs
         return action, log_probs

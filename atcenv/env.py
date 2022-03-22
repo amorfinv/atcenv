@@ -1,6 +1,8 @@
 """
 Environment module
 """
+
+
 import gym
 from typing import Dict, List
 from atcenv.definitions import *
@@ -102,9 +104,9 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -10
+        weight_a    = 0 #-10
         weight_b    = 1/5.
-        weight_c    = 0
+        weight_c    = -3
         weight_d    = 0
         weight_e    = 0  
         

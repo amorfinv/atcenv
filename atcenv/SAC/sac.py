@@ -19,7 +19,7 @@ STDS = [31500,31500,46000,46000,1,1,1,1]
 class SAC:
     def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[8],
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-            layer1_size=256, layer2_size=256, batch_size=1024, reward_scale=10):
+            layer1_size=256, layer2_size=256, batch_size=256, reward_scale=10):
         self.gamma = gamma
         self.tau = tau
         self.memory = ReplayBuffer(max_size, input_dims, n_actions)
