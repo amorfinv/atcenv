@@ -44,6 +44,7 @@ class SAC:
     def do_step(self, observation, max_speed, min_speed, test = False):
         
         state = tf.convert_to_tensor([observation])
+        print(state)
         actions, _ = self.actor.sample_normal(state, reparameterize=False, test=test)
 
         return actions[0]

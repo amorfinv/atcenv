@@ -84,7 +84,7 @@ class ActorNetwork(keras.Model):
         
         return mu, sigma
 
-    def sample_normal(self, state, reparameterize=True, test= False):
+    def sample_normal(self, state, reparameterize=True, test= False, batch = True):
         mu, sigma = self.call(state)
         probabilities = tfp.distributions.Normal(mu, sigma)
 
@@ -96,7 +96,10 @@ class ActorNetwork(keras.Model):
         action = tf.math.tanh(actions)*self.max_action
         log_probs = probabilities.log_prob(actions) # potential target
         log_probs -= tf.math.log(1-tf.math.pow(action,2)+self.noise) #potential target twice
-        log_probs = tf.math.reduce_sum(log_probs, axis=2, keepdims=True) #axis = 2 for batches of states
+        if not batch:
+            log_probs = tf.math.reduce_sum(log_probs, axis=1, keepdims=True) #axis = 2 for batches of states
+        else:
+            log_probs = tf.math.reduce_sum(log_probs, axis=2, keepdims=True) #axis = 2 for batches of states
         if test:
             return mu, log_probs
         return action, log_probs

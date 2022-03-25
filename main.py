@@ -17,6 +17,7 @@ if __name__ == "__main__":
     from atcenv.DDPG.DDPG import DDPG
     import atcenv.DDPG.TempConfig as tc
     from atcenv.SAC.sac import SAC
+    from atcenv.MASAC.masac import MASAC
     import copy
 
     parser = ArgumentParser(
@@ -37,10 +38,10 @@ if __name__ == "__main__":
     env = Environment(**vars(args.env))
 
     #RL = DDPG()
-    RL = SAC()
+    RL = MASAC()
 
-    load_models = True
-    test = True
+    load_models = False
+    test = False
 
     if load_models:
         RL.load_models()
@@ -96,9 +97,9 @@ if __name__ == "__main__":
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
-            if e%25 == 0:
+            if e%10 == 0:
                 env.render()
-                time.sleep(0.01)
+                #time.sleep(0.01)
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)
 
@@ -119,6 +120,9 @@ if __name__ == "__main__":
         np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
+        print(f'Done aircraft: {len(env.done)}')  
+        print(f'Done aircraft IDs: {env.done}')      
+
         print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
         #snapshot2 = tracemalloc.take_snapshot()
         #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
