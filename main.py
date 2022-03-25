@@ -51,6 +51,7 @@ if __name__ == "__main__":
     # run episodes
     state_list = []
     for e in tqdm(range(args.episodes)):   
+        print('\n-----------------------------------------------------')
         #snapshot1 = tracemalloc.take_snapshot()     
         episode_name = "EPISODE_" + str(e) 
 
@@ -97,11 +98,11 @@ if __name__ == "__main__":
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
-            if e%10 == 0:
-                env.render()
+            # if e%10 == 0:
+            #     env.render()
                 #time.sleep(0.01)
             number_steps_until_done += 1
-            number_conflicts += sum(env.conflicts)
+            number_conflicts += len(env.conflicts)
 
             
                 
