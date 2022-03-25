@@ -199,7 +199,7 @@ if __name__ == "__main__":
             rewards_per_ac = conflicts_per_ac * EVO_CONF_W + times_reached_per_ac * EVO_REACHED_W
             
             # Find the two best agents
-            best_1, best_2 = np.argsort(np.max(rewards_per_ac, axis=0))[[-2, -1]]
+            best_1, best_2 = np.argsort(rewards_per_ac)[[-2, -1]]
             
             print(f'Selected agents number {best_1} and {best_2}.')
             
