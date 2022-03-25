@@ -106,7 +106,7 @@ class Environment(gym.Env):
         """
         weight_a    = 0 #-5.
         weight_b    = 2/5.
-        weight_c    = 0 #-5.
+        weight_c    = -3 #-5.
         weight_d    = 0
         weight_e    = 0
         weight_f    = 0

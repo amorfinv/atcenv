@@ -26,7 +26,7 @@ if __name__ == "__main__":
     STATE_SIZE = 8
     ACTION_SIZE = 2
     NUMBER_ACTORS_MARL = 10
-    EVOLUTION_EPISODE = 50
+    EVOLUTION_EPISODE = 10
     
     EVO_REACHED_W = 50
     EVO_CONF_W    = -0.1
@@ -199,7 +199,9 @@ if __name__ == "__main__":
             rewards_per_ac = conflicts_per_ac * EVO_CONF_W + times_reached_per_ac * EVO_REACHED_W
             
             # Find the two best agents
-            best_1, best_2 = np.argsort(np.max(x, axis=0))[[-2, -1]]
+            best_1, best_2 = np.argsort(np.max(rewards_per_ac, axis=0))[[-2, -1]]
+            
+            print(f'Selected agents number {best_1} and {best_2}.')
             
             # Set all other agents as these ones
             to_set = best_1
@@ -208,6 +210,7 @@ if __name__ == "__main__":
                     continue
                 
                 #Set this agent as one of the bests
+                print(f'Replacing agent {i_agent} with agent {to_set}.')
                 RL.super_agent.agents[i_agent] = copy.deepcopy(RL.super_agent.agents[to_set])
                 
                 # Change the to_set
