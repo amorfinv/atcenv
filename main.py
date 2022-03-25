@@ -11,6 +11,7 @@ if __name__ == "__main__":
     from atcenv import Environment
     import time
     from tqdm import tqdm
+    import tensorflow as tf
 
     # RL models
     from atcenv.DDPG.DDPG import DDPG
@@ -26,8 +27,8 @@ if __name__ == "__main__":
     STATE_SIZE = 8
     ACTION_SIZE = 2
     NUMBER_ACTORS_MARL = 10
-    EVOLUTION_EPISODE = 10
     
+    EVOLUTION_EPISODE = 25
     EVO_REACHED_W = 50
     EVO_CONF_W    = -0.1
 
@@ -211,7 +212,10 @@ if __name__ == "__main__":
                 
                 #Set this agent as one of the bests
                 print(f'Replacing agent {i_agent} with agent {to_set}.')
-                RL.super_agent.agents[i_agent] = copy.deepcopy(RL.super_agent.agents[to_set])
+                RL.super_agent.agents[i_agent].actor.set_weights(RL.super_agent.agents[to_set].actor.get_weights())
+                RL.super_agent.agents[i_agent].critic.set_weights(RL.super_agent.agents[to_set].critic.get_weights())
+                RL.super_agent.agents[i_agent].target_actor.set_weights(RL.super_agent.agents[to_set].target_actor.get_weights())
+                RL.super_agent.agents[i_agent].target_critic.set_weights(RL.super_agent.agents[to_set].target_critic.get_weights())
                 
                 # Change the to_set
                 if to_set == best_1:
