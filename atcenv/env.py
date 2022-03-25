@@ -167,13 +167,13 @@ class Environment(gym.Env):
         :return: boolean list for conflicts
         """
         
-        conflicts = np.zeros(self.num_flights)
+        conflicts_per_ac = np.zeros(self.num_flights)
         for i in range(self.num_flights):
             if i not in self.done:
                 if i in self.conflicts:
-                    conflicts[i] += 1
+                    conflicts_per_ac[i] += 1
                     
-        return conflicts
+        return conflicts_per_ac
     
     def drift_penalties(self):
         """

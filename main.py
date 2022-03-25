@@ -26,6 +26,10 @@ if __name__ == "__main__":
     STATE_SIZE = 8
     ACTION_SIZE = 2
     NUMBER_ACTORS_MARL = 10
+    EVOLUTION_EPISODE = 50
+    
+    EVO_REACHED_W = 50
+    EVO_CONF_W    = -0.1
 
     parser = ArgumentParser(
         prog='Conflict resolution environment',
@@ -55,8 +59,16 @@ if __name__ == "__main__":
     conf_list = []
 
     obs_list = []
+    
+    # Genetic stuff
+    agent_conflict_storage = []
+    agent_conflicts_this_episode = [0] * NUMBER_ACTORS_MARL
+    
+    agent_reached_storage = []
+    
     # run episodes
-    for e in tqdm(range(args.episodes)):        
+    for e in tqdm(range(args.episodes)):   
+        print('--------------------------------------------------------')     
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
@@ -148,10 +160,11 @@ if __name__ == "__main__":
                         RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
 
             # comment render out for faster processing
-            if e%10 == 0:
-                env.render()
+            #if e%10 == 0:
+                #env.render()
             number_steps_until_done += 1
-            number_conflicts += sum(env.conflicts)
+            number_conflicts += sum(len(env.conflicts))
+            
             #time.sleep(0.05)
 
         if len(tot_rew_list) < 100:
@@ -160,13 +173,53 @@ if __name__ == "__main__":
         else:
             tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
             conf_list[e%100 -1] = number_conflicts
+            
         # save information
-        #RL.update() # train the model
+        agent_conflict_storage.append(agent_conflicts_this_episode)
+        
+        temp_list = [0] * NUMBER_ACTORS_MARL
+        
+        for ac_id_done in env.done:
+            temp_list[ac_id_done] = 1
+            
+        agent_reached_storage.append(temp_list)
+        
+        ############## GENETICS ################
+        if len(agent_conflict_storage) == EVOLUTION_EPISODE:
+            # We perform artificial selection
+            agent_conflict_storage = np.array(agent_conflict_storage)
+            agent_reached_storage = np.array(agent_reached_storage)
+            
+            # Get the evaluations for conflicts and reached
+            conflicts_per_ac = np.sum(agent_conflict_storage, axis = 0)
+            times_reached_per_ac = np.sum(agent_reached_storage, axis = 0)
+            
+            # Get the reward functions for each
+            rewards_per_ac = conflicts_per_ac * EVO_CONF_W + times_reached_per_ac * EVO_REACHED_W
+            
+            # Find the two best agents
+            best_1, best_2 = np.argsort(np.max(x, axis=0))[[-2, -1]]
+            
+            # Set all other agents as these ones
+            to_set = best_1
+            for i_agent in range(NUMBER_ACTORS_MARL):
+                if i_agent == best_1 or i_agent == best_2:
+                    continue
+                
+                #Set this agent as one of the bests
+                RL.super_agent.agents[i_agent] = copy.deepcopy(RL.super_agent.agents[to_set])
+                
+                # Change the to_set
+                if to_set == best_1:
+                    to_set = best_2
+                else:
+                    to_set = best_1
+            
         # comment out on testing
         RL.episode_end(episode_name)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print('--------------------------------------------------------')
+
         print(f' {episode_name} ended in {number_steps_until_done} runs, with {number_conflicts} conflicts.')
         print(f'Number of aircraft: {number_of_aircraft}')
         print(f'Done aircraft: {len(env.done)}')  
