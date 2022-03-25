@@ -163,7 +163,7 @@ if __name__ == "__main__":
             #if e%10 == 0:
                 #env.render()
             number_steps_until_done += 1
-            number_conflicts += sum(len(env.conflicts))
+            number_conflicts += len(env.conflicts)
             
             #time.sleep(0.05)
 
@@ -176,6 +176,7 @@ if __name__ == "__main__":
             
         # save information
         agent_conflict_storage.append(agent_conflicts_this_episode)
+        agent_conflicts_this_episode = [0] * NUMBER_ACTORS_MARL
         
         temp_list = [0] * NUMBER_ACTORS_MARL
         
@@ -214,6 +215,9 @@ if __name__ == "__main__":
                     to_set = best_2
                 else:
                     to_set = best_1
+                    
+                agent_conflict_storage = []
+                agent_reached_storage = []
             
         # comment out on testing
         RL.episode_end(episode_name)
