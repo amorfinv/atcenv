@@ -211,6 +211,8 @@ class Environment(gym.Env):
         bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING
         dx_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
         dy_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
+
+        trackdif_all  = np.ones((self.num_flights, self.num_flights))*3.14
         for i in range(self.num_flights):
             if i not in self.done:
                 for j in range(self.num_flights):
@@ -232,6 +234,8 @@ class Environment(gym.Env):
                         elif compass < -math.pi:
                             compass = u.circle + compass
                         bearing_all[i][j] = compass
+
+                        trackdif_all[i][j] = self.flights[i].track - self.flights[j].track
 
                         dx_all[i][j] = m.sin(float(bearing_all[i][j])) * cur_dis[i][j]
                         dy_all[i][j] = m.cos(float(bearing_all[i][j])) * cur_dis[i][j]
@@ -269,8 +273,10 @@ class Environment(gym.Env):
                     observations.append(0)
                 
                 
-                
+                observations += np.take(trackdif_all[i], closest_intruders).tolist()
 
+                while len(observations) < 5*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
                 
                 # current speed
                 observations.append(f.airspeed)

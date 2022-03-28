@@ -17,8 +17,8 @@ MEANS = [57000,57000,0,0,0,0,0,0]
 STDS = [31500,31500,100000,100000,1,1,1,1]
 
 class MASAC:
-    def __init__(self, alpha=0.003, beta=0.003, n_agents = 10, state_size = 12,
-            input_dims=[12], actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
+    def __init__(self, alpha=0.003, beta=0.003, n_agents = 10, state_size = 14,
+            input_dims=[14], actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
             layer1_size=256, layer2_size=256, batch_size=256, reward_scale=20):
         self.gamma = gamma
         self.tau = tau
@@ -184,19 +184,20 @@ class MASAC:
         for i in range(NUMBER_INTRUDERS_STATE*3, NUMBER_INTRUDERS_STATE*4):
             s_t[i] = (s_t[i]-MEANS[3])/(STDS[3]*2)
 
-
+        for i in range(NUMBER_INTRUDERS_STATE*4, NUMBER_INTRUDERS_STATE*5):
+            s_t[i] = (s_t[i])/(3.1415)
 
         # current bearing
         
         # current speed
-        s_t[NUMBER_INTRUDERS_STATE*4] = ((s_t[NUMBER_INTRUDERS_STATE*4]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*5] = ((s_t[NUMBER_INTRUDERS_STATE*5]-min_speed)/(max_speed-min_speed))*2 - 1
         # optimal speed
-        s_t[NUMBER_INTRUDERS_STATE*4 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*4 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*5 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*5 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
         # # distance to target
         # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # # bearing to target
-        s_t[NUMBER_INTRUDERS_STATE*4+2] = s_t[NUMBER_INTRUDERS_STATE*4+2]
-        s_t[NUMBER_INTRUDERS_STATE*4+3] = s_t[NUMBER_INTRUDERS_STATE*4+3]
+        s_t[NUMBER_INTRUDERS_STATE*5+2] = s_t[NUMBER_INTRUDERS_STATE*5+2]
+        s_t[NUMBER_INTRUDERS_STATE*5+3] = s_t[NUMBER_INTRUDERS_STATE*5+3]
 
         # s_t[0] = s_t[0]/MAX_BEARING
 

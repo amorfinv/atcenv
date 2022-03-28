@@ -75,9 +75,9 @@ if __name__ == "__main__":
             actions = []
             for obs_i in obs:
                 # print(obs_i)
-                #actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed, test=test))
+                actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed, test=test))
                 # actions.append((np.random.rand(2)-0.5)*2)
-                actions.append([0,0])
+                #actions.append([0,0])
 
             obs0 = copy.deepcopy(obs)
 
