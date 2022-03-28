@@ -221,14 +221,20 @@ class Environment(gym.Env):
 
                         distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
 
-                        # bearing
-                        dx = self.flights[i].prediction.x - self.flights[j].prediction.x
-                        dy = self.flights[i].prediction.y - self.flights[j].prediction.y
-                        compass = math.atan2(dx, dy)
-                        bearing_all[i][j] = (compass + u.circle) % u.circle
+                         # relative bearing
+                        dx = self.flights[j].position.x - self.flights[i].position.x
+                        dy = self.flights[j].position.y - self.flights[i].position.y
+                        compass = math.atan2(dx, dy)                             
+                        compass = compass - self.flights[i].track  
+                        compass = (compass + u.circle) % u.circle       
+                        if compass > math.pi:
+                            compass = -(u.circle - compass)
+                        elif compass < -math.pi:
+                            compass = u.circle + compass
+                        bearing_all[i][j] = compass
 
-                        dx_all[i][j] = self.flights[i].position.x - self.flights[j].position.x
-                        dy_all[i][j]  = self.flights[i].position.y - self.flights[j].position.y
+                        dx_all[i][j] = m.sin(float(bearing_all[i][j])) * cur_dis[i][j]
+                        dy_all[i][j] = m.cos(float(bearing_all[i][j])) * cur_dis[i][j]
 
         for i, f in enumerate(self.flights):
             if i not in self.done:

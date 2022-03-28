@@ -13,8 +13,8 @@ NUMBER_INTRUDERS_STATE = 2
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
-MEANS = [57000,57000,1300,-1500,0,0,0,0]
-STDS = [31500,31500,46000,46000,1,1,1,1]
+MEANS = [57000,57000,0,0,0,0,0,0]
+STDS = [31500,31500,100000,100000,1,1,1,1]
 
 class MASAC:
     def __init__(self, alpha=0.003, beta=0.003, n_agents = 10, state_size = 12,

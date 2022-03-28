@@ -75,9 +75,9 @@ if __name__ == "__main__":
             actions = []
             for obs_i in obs:
                 # print(obs_i)
-                actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed, test=test))
+                #actions.append(RL.do_step(obs_i,env.max_speed, env.min_speed, test=test))
                 # actions.append((np.random.rand(2)-0.5)*2)
-                # actions.append([0,0])
+                actions.append([0,0])
 
             obs0 = copy.deepcopy(obs)
 
@@ -85,13 +85,13 @@ if __name__ == "__main__":
             obs, rew, done_t, done_e, info = env.step(actions)
 
             for obs_i in obs:
-                RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+               RL.normalizeState(obs_i, env.max_speed, env.min_speed)
 
             if done_t or done_e:
                 done = True
 
-            for obs_i in obs:
-                state_list.append(obs_i)
+            #for obs_i in obs:
+            #    state_list.append(obs_i)
             tot_rew += rew
             # train the RL model
             for it_obs in range(len(obs)):
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         if e%100 == 0:
             RL.save_models()
         #RL.episode_end(episode_name)
-        np.savetxt('states.csv', state_list)
+        #np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
         print(f'Done aircraft: {len(env.done)}')  
