@@ -18,7 +18,7 @@ BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
-NUMBER_INTRUDERS_STATE = 1
+NUMBER_INTRUDERS_STATE = 2
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = 2*math.pi
 
@@ -104,9 +104,9 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = 0 #-10
+        weight_a    = -10 #-10
         weight_b    = 1/5.
-        weight_c    = -3
+        weight_c    = 0
         weight_d    = 0
         weight_e    = 0  
         
