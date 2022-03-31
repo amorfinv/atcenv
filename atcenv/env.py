@@ -102,7 +102,7 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -10 #-10
+        weight_a    = -25 #-10
         weight_b    = 1/5.
         weight_c    = 0
         weight_d    = 0
@@ -204,11 +204,11 @@ class Environment(gym.Env):
         # bearing to target
 
         observations_all = []
-        cur_dis     = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
-        distance_all = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
-        bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING
-        dx_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
-        dy_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
+        cur_dis     = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE/5.
+        distance_all = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE/5.
+        bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING/3.
+        dx_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE/5.
+        dy_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE/5.
 
         trackdif_all  = np.ones((self.num_flights, self.num_flights))*3.14
         for i in range(self.num_flights):
