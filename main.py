@@ -91,9 +91,10 @@ if __name__ == "__main__":
             tot_rew += rew
             # train the RL model
             #for it_obs in range(len(obs)):
-            while len(obs) < len(obs0):
-                obs.append( [0] * 14) # STATE_SIZE = 14
-            RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
+            #while len(obs) < len(obs0):
+            #    obs.append( [0] * 14) # STATE_SIZE = 14
+            if len(env.done) == 0:
+                RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
             if e%10 == 0:
