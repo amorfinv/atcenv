@@ -121,7 +121,7 @@ if __name__ == "__main__":
         print(f'Done aircraft: {len(env.done)}')  
         print(f'Done aircraft IDs: {env.done}')      
 
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list))/20.)        
         #snapshot2 = tracemalloc.take_snapshot()
         #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
 

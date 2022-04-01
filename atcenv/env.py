@@ -59,7 +59,7 @@ class Environment(gym.Env):
         self.dt = dt
 
         # tolerance to consider that the target has been reached (in meters)
-        self.tol = self.max_speed * 1.05 * self.dt
+        self.tol = self.max_speed * 1.05 * self.dt *5
 
         self.viewer = None
         self.airspace = None
@@ -85,7 +85,7 @@ class Environment(gym.Env):
 
                 # heading, speed
 
-                new_track = f.track + action[it2][0] * MAX_BEARING/8
+                new_track = f.track + action[it2][0] * MAX_BEARING/32
 
                 f.track = (new_track + u.circle) % u.circle
 
@@ -102,9 +102,9 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -25 #-10
+        weight_a    = 0 #-10
         weight_b    = 1/5.
-        weight_c    = 0
+        weight_c    = -150.
         weight_d    = 0
         weight_e    = 0  
         
@@ -170,7 +170,7 @@ class Environment(gym.Env):
         drift = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                drift[i] = 0.5 - abs(f.drift)
+                drift[i] = 1 - abs(f.drift)**2
         
         return drift
             
@@ -185,7 +185,7 @@ class Environment(gym.Env):
                         distance = self.flights[i].position.distance(self.flights[j].position)
                         distances = np.append(distances,distance)
                     #conflict severity on a scale of 0-1
-                    severity[i] = -1.*((min(distances)-self.min_distance)/self.min_distance)
+                    severity[i] = 0.2 -0.8*((min(distances)-self.min_distance)/self.min_distance)
         
         return severity
 

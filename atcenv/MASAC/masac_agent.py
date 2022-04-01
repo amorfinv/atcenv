@@ -47,9 +47,9 @@ class MaSacAgent:
         self.qf2 = CriticQ(STATE_DIM * NUM_AGENTS + ACTION_DIM * NUM_AGENTS).to(self.device)
 
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=3e-4)
-        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=3e-4)
-        self.qf1_optimizer = optim.Adam(self.qf1.parameters(), lr=3e-4)
-        self.qf2_optimizer = optim.Adam(self.qf2.parameters(), lr=3e-4)
+        self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=3e-3)
+        self.qf1_optimizer = optim.Adam(self.qf1.parameters(), lr=3e-3)
+        self.qf2_optimizer = optim.Adam(self.qf2.parameters(), lr=3e-3)
 
         #self.transition = [[] for i in range(NUM_AGENTS)]
         self.transition = []
