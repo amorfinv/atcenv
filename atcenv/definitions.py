@@ -56,6 +56,8 @@ class Flight:
 
     airspeed: float = field(init=False)
     track: float = field(init=False)
+    
+    reported_position: Point = None
 
     def __post_init__(self) -> None:
         """
@@ -64,6 +66,11 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
+        # The reported position, not the actual one
+        self.reported_position = self.position
+        # The action delay still left before 
+        self.action_delay = -999
+        self.delayed_action = None
 
     @property
     def bearing(self) -> float:
@@ -71,8 +78,12 @@ class Flight:
         Bearing from current position to target
         :return:
         """
-        dx = self.target.x - self.position.x
-        dy = self.target.y - self.position.y
+        if self.reported_position is not None:
+            dx = self.target.x - self.reported_position.x
+            dy = self.target.y - self.reported_position.y
+        else:
+            dx = self.target.x - self.position.x
+            dy = self.target.y - self.position.y
         compass = math.atan2(dx, dy)
         return (compass + u.circle) % u.circle
 
@@ -89,14 +100,14 @@ class Flight:
         return math.atan2(vertical_distance, horizontal_distance)
 
     @property
-    def prediction(self, dt: Optional[float] = 120) -> Point:
+    def prediction(self, dt: Optional[float] = 20) -> Point:
         """
         Predicts the future position after dt seconds, maintaining the current speed and track
         :param dt: prediction look-ahead time (in seconds)
         :return:
         """
-        dx, dy= self.components
-        return Point([self.position.x + dx * dt, self.position.y + dy * dt])
+        dx, dy = self.components
+        return Point([self.reported_position.x + dx * dt, self.reported_position.y + dy * dt])
 
     @property
     def components(self) -> Tuple:
@@ -114,7 +125,7 @@ class Flight:
         Current horizontal distance to the target (in meters)
         :return: horizontal distance to the target
         """
-        return self.position.distance(self.target)
+        return self.reported_position.distance(self.target)
 
     @property
     def totaldistance(self) -> float:
