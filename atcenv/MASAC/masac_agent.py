@@ -20,8 +20,8 @@ NUM_AGENTS = 10
 BUFFER_SIZE = 1000000
 BATCH_SIZE = 256
 
-ACTION_DIM = 2
-STATE_DIM = 14
+ACTION_DIM = 3
+STATE_DIM = 17
 NUMBER_INTRUDERS_STATE = 2
 
 MEANS = [57000,57000,0,0,0,0,0,0]
@@ -29,6 +29,7 @@ STDS = [31500,31500,100000,100000,1,1,1,1]
 
 class MaSacAgent:
     def __init__(self):                
+        self.statedim = STATE_DIM
         self.memory = ReplayBuffer(STATE_DIM,ACTION_DIM, BUFFER_SIZE, BATCH_SIZE)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -185,14 +186,14 @@ class MaSacAgent:
         # current bearing
         
         # current speed
-        s_t[NUMBER_INTRUDERS_STATE*5] = ((s_t[NUMBER_INTRUDERS_STATE*5]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*6] = ((s_t[NUMBER_INTRUDERS_STATE*6]-min_speed)/(max_speed-min_speed))*2 - 1
         # optimal speed
-        s_t[NUMBER_INTRUDERS_STATE*5 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*5 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
+        s_t[NUMBER_INTRUDERS_STATE*6 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*6 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
         # # distance to target
         # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # # bearing to target
-        s_t[NUMBER_INTRUDERS_STATE*5+2] = s_t[NUMBER_INTRUDERS_STATE*5+2]
-        s_t[NUMBER_INTRUDERS_STATE*5+3] = s_t[NUMBER_INTRUDERS_STATE*5+3]
+        s_t[NUMBER_INTRUDERS_STATE*6+2] = s_t[NUMBER_INTRUDERS_STATE*6+2]
+        s_t[NUMBER_INTRUDERS_STATE*6+3] = s_t[NUMBER_INTRUDERS_STATE*6+3]
 
         # s_t[0] = s_t[0]/MAX_BEARING
 

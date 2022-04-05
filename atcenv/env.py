@@ -29,7 +29,6 @@ MINIMUM_WIND_SPEED = 0 # m/s
 MAXIMUM_WIND_SPEED = 30 # m/s
 
 
-NUMBER_INTRUDERS_STATE = 5
 NUMBER_INTRUDERS_STATE = 2
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
@@ -108,9 +107,8 @@ class Environment(gym.Env):
                 # heading, speed, climb
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
-                f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
-                f.altitude = action[it2][2]
-                it2 +=1
+                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
+                f.altitude = int(max(np.sign(action[it2][2]),0))
 
                 it2 += 1
         # RDC: here you should implement your resolution actions
@@ -128,14 +126,16 @@ class Environment(gym.Env):
         weight_c    = 0
         weight_d    = -0.001
         weight_e    = 0  
+        weight_f    = -0.1 
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
         severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
-        target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
+        target      = self.reachedTarget() * weight_e 
+        alt_dif     = self.vertical_penalties() * weight_f
         
-        tot_reward  = conflicts + drifts + severities + speed_dif + target  
+        tot_reward  = conflicts + drifts + severities + speed_dif + target   + alt_dif
 
         return tot_reward
 
@@ -185,7 +185,7 @@ class Environment(gym.Env):
         Returns a list with the drift angle for all aircraft,
         can be used for multiplication as individual reward
         component
-        :return: float of the drift angle
+        :return: float of the drift angle        
         """
         
         drift = np.zeros(self.num_flights)
@@ -196,8 +196,18 @@ class Environment(gym.Env):
         return drift
 
     def vertical_penalties(self):
-        ...
+        """
+        Returns a penaly of 1 for aircraft in the ``secondary'' altitude level
+        :return: int for the vertical penaly      
+        """
 
+        vertical_penalty =np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            if i not in self.done and self.flights[i].altitude > 0: # not in the target altitude
+                vertical_penalty[i] += 1
+        
+        return vertical_penalty
+ 
     def conflict_severity(self):
         """
         :return: numpy array with the severity of each conflict
@@ -237,9 +247,10 @@ class Environment(gym.Env):
         bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING
         dx_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
         dy_all  = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
+        altitude_all = np.ones((self.num_flights, self.num_flights))
 
         trackdif_all  = np.ones((self.num_flights, self.num_flights))*3.14
-        for i in range(self.num_flights):
+        for i, f in enumerate(self.flights):
             if i not in self.done:
                 for j in range(self.num_flights):
                     if j not in self.done and j != i:
@@ -270,6 +281,8 @@ class Environment(gym.Env):
 
                         dx_all[i][j] = m.sin(float(bearing_all[i][j])) * cur_dis[i][j]
                         dy_all[i][j] = m.cos(float(bearing_all[i][j])) * cur_dis[i][j]
+
+                        altitude_all[i][j] = abs(self.flights[i].altitude - self.flights[j].altitude)
 
         for i, f in enumerate(self.flights):
             if i not in self.done:
@@ -307,6 +320,12 @@ class Environment(gym.Env):
 
                 while len(observations) < 5*NUMBER_INTRUDERS_STATE:
                     observations.append(0)
+
+                # altitude of the intruding aircraft
+                observations += np.take(altitude_all[i], closest_intruders).tolist()
+
+                while len(observations) < 6*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
                 
                 # current speed
                 observations.append(f.airspeed)
@@ -315,7 +334,10 @@ class Environment(gym.Env):
                 observations.append(f.optimal_airspeed)
 
                 # # distance to target
-                # observations.append(f.position.distance(f.target))
+                # observations.append(f.position.distance(f.target)
+
+                # add current altitude
+                observations.append(f.altitude)
 
                 # bearing to target
                 observations.append(m.sin(float(f.drift)))
