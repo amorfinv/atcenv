@@ -526,14 +526,20 @@ class Environment(gym.Env):
             if i in self.conflicts:
                 color = RED
             else:
-                color = BLUE
+                if f.altitude == self.alt:
+                    color = BLUE
+                else:
+                    color = GREEN
 
             circle = rendering.make_circle(radius=self.min_distance_horizontal / 2.0,
                                            res=10,
                                            filled=False)
             circle.add_attr(rendering.Transform(translation=(f.reported_position.x,
                                                              f.reported_position.y)))
-            circle.set_color(*BLUE)
+            if f.altitude == self.alt:
+                circle.set_color(*BLUE)
+            else:
+                circle.set_color(*GREEN)
 
             plan = LineString([f.reported_position, f.target])
             self.viewer.draw_polyline(plan.coords, linewidth=1, color=color)
