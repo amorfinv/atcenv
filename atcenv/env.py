@@ -126,7 +126,7 @@ class Environment(gym.Env):
         weight_c    = 0
         weight_d    = -0.001
         weight_e    = 0  
-        weight_f    = -0.1 
+        weight_f    = -5
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
@@ -258,7 +258,7 @@ class Environment(gym.Env):
                         # avoid a future conflict
                         cur_dis[i][j] = self.flights[i].position.distance(self.flights[j].position)
                         h_distance = self.flights[i].prediction.distance(self.flights[j].prediction)
-                        distance_all[i][j] = h_distance if f.altitude == self.alt else MAX_DISTANCE
+                        distance_all[i][j] = h_distance
                         # relative bearing
                         dx = self.flights[i].prediction.x - self.flights[j].prediction.x
                         dy = self.flights[i].prediction.y - self.flights[j].prediction.y
