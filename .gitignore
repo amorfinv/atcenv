@@ -148,6 +148,11 @@ cython_debug/
 # Results
 results/*
 
+# project ignore settings
+graphs/*
+plotting.py
+.DS_Store
+
 tmp/*
 rewards.csv
 states.csv
