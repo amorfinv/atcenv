@@ -109,6 +109,7 @@ class Environment(gym.Env):
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
                 f.altitude = int(max(np.sign(action[it2][2]),0))
+                f.airspeed = max(min(f.airspeed , self.max_speed), self.min_speed) # limit airspeed to the limits
 
                 it2 += 1
         # RDC: here you should implement your resolution actions
