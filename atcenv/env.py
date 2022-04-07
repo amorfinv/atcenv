@@ -127,7 +127,7 @@ class Environment(gym.Env):
         weight_c    = 0
         weight_d    = -0.001
         weight_e    = 0  
-        weight_f    = -5
+        weight_f    = -9
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
