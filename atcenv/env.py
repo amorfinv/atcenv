@@ -117,7 +117,7 @@ class Environment(gym.Env):
         return None
         ##########################################################
 
-    def reward(self) -> List:
+    def reward(self, previous_altitude) -> List:
         """
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
@@ -127,18 +127,32 @@ class Environment(gym.Env):
         weight_c    = 0
         weight_d    = -0.001
         weight_e    = 0  
-        weight_f    = -9
+        weight_f    = -4
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
         severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
         target      = self.reachedTarget() * weight_e 
-        alt_dif     = self.vertical_penalties() * weight_f
+        #alt_dif     = self.vertical_penalties() * weight_f
+        alt_dif     = self.vertical_changes(previous_altitude) * weight_f
         
         tot_reward  = conflicts + drifts + severities + speed_dif + target   + alt_dif
 
         return tot_reward
+
+    def vertical_changes(self, previous_altitude):
+        """
+        Returns a penaly of 1 for aircraft in the ``secondary'' altitude level
+        :return: int for the vertical penaly      
+        """
+
+        vertical_penalty =np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            if i not in self.done and self.flights[i].altitude !=previous_altitude[i]: # not in the target altitude
+                vertical_penalty[i] += 1
+        
+        return vertical_penalty
 
     def reachedTarget(self):
         """
@@ -412,7 +426,10 @@ class Environment(gym.Env):
         :param action: list of resolution actions assigned to each flight
         :return: observation, reward, done status and other information
         """
-        # apply resolution actions
+        # apply resolution actions       
+        previous_altitude = np.array([]) 
+        for i, f in enumerate(self.flights):
+            previous_altitude = np.append(previous_altitude, f.altitude)
         self.resolution(action)
 
         # update positions
@@ -425,7 +442,7 @@ class Environment(gym.Env):
         self.update_conflicts()
 
         # compute reward
-        rew = self.reward()
+        rew = self.reward(previous_altitude)
 
         # compute observation
         obs = self.observation()
