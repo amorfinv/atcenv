@@ -4,6 +4,7 @@ Environment module
 import gym
 from typing import Dict, List
 from atcenv.definitions import *
+import atcenv.settings as cfg
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 from .uncertainties import position_scramble, apply_wind, apply_position_delay
@@ -18,25 +19,25 @@ BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
+# READ CONFIGURATION FILE PARAMETERS
 # Position uncertainty vars
-ENABLE_POSITION_UNCERTAINTY = False
-PROB_POSITION_UNCERTAINTY = 0.2
-MAG_POSITION_UNCERTAINTY = 500 # m
+ENABLE_POSITION_UNCERTAINTY = cfg.ENABLE_POSITION_UNCERTAINTY # boolean
+PROB_POSITION_UNCERTAINTY = cfg.PROB_POSITION_UNCERTAINTY # number between 0 and 1
+MAG_POSITION_UNCERTAINTY = cfg.MAG_POSITION_UNCERTAINTY # meters
 
 # Wind
-ENABLE_WIND = False
-MINIMUM_WIND_SPEED = 0 # m/s
-MAXIMUM_WIND_SPEED = 30 # m/s
+ENABLE_WIND = cfg.ENABLE_WIND # boolean
+MINIMUM_WIND_SPEED = cfg.MINIMUM_WIND_SPEED # m/s
+MAXIMUM_WIND_SPEED = cfg.MAXIMUM_WIND_SPEED # m/s
 
 # Delay
-ENABLE_DELAY = False
-MAXIMUM_DELAY = 3 # s
-PROB_DELAY = 0.1
+ENABLE_DELAY = cfg.ENABLE_DELAY # boolean
+MAXIMUM_DELAY = cfg.MAXIMUM_DELAY # seconds
+PROB_DELAY = cfg.PROB_DELAY # number between 0 and 1
 
-NUMBER_INTRUDERS_STATE = 5
-NUMBER_INTRUDERS_STATE = 2
-MAX_DISTANCE = 250*u.nm
-MAX_BEARING = math.pi
+NUMBER_INTRUDERS_STATE = cfg.NUMBER_INTRUDERS_STATE # number of intruder states
+MAX_DISTANCE = cfg.MAX_DISTANCE # meters
+MAX_BEARING = cfg.MAX_BEARING # radians
 
 class Environment(gym.Env):
     metadata = {'render.modes': ['rgb_array']}

@@ -10,6 +10,7 @@ if __name__ == "__main__":
     random.seed(52)
     from jsonargparse import ArgumentParser, ActionConfigFile
     from atcenv import Environment
+    import atcenv.settings as cfg
     import time
     from tqdm import tqdm
 
