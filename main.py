@@ -34,10 +34,21 @@ if __name__ == "__main__":
     #tracemalloc.start()
 
     # init environment
-    env = Environment(**vars(args.env))
+    env_args = vars(args.env)
+    env_args['altitude'] = 0 # in meters
+    env = Environment(**env_args)
 
-    #RL = DDPG()
-    RL = MaSacAgent()
+    number_of_aircraft = 10
+    # enable using a secondary altitude level
+    use_altitude = True    
+    if use_altitude:
+        action_dim = 3 #heading, speed, altitude
+        state_dim = 17
+    else:
+        action_dim = 2 #heading, speed
+        state_dim = 14
+    num_intruders_state = 2
+    RL = MaSacAgent(number_of_aircraft, action_dim, state_dim, num_intruders_state, use_altitude)
 
     load_models = False
     test = False
@@ -54,11 +65,8 @@ if __name__ == "__main__":
         print('\n-----------------------------------------------------')
         #snapshot1 = tracemalloc.take_snapshot()     
         episode_name = "EPISODE_" + str(e) 
-
-        # reset environment
-        # train with an increasing number of aircraft
-        number_of_aircraft = 10 #min(int(e/500)+5,10)
-        obs = env.reset(number_of_aircraft)
+      
+        obs = env.reset(number_of_aircraft, num_intruders_state, use_altitude)
         for obs_i in obs:
             RL.normalizeState(obs_i, env.max_speed, env.min_speed)
         # set done status to false
@@ -97,13 +105,13 @@ if __name__ == "__main__":
             # train the RL model
             #for it_obs in range(len(obs)):
             while len(obs) < len(obs0):
-                obs.append( [0] * 14) # STATE_SIZE = 14
+                obs.append( [0] * RL.statedim) # STATE_SIZE = 14
             RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
                 # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
             # if e%10 == 0:
-            #     env.render()
-                #time.sleep(0.01)
+            env.render()
+
             number_steps_until_done += 1
             number_conflicts += len(env.conflicts)
             average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])            
