@@ -18,9 +18,10 @@ BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
+
 # Position uncertainty vars
 ENABLE_POSITION_UNCERTAINTY = False
-PROB_POSITION_UNCERTAINTY = 0.2
+PROB_POSITION_UNCERTAINTY = 1
 MAG_POSITION_UNCERTAINTY = 500 # m
 
 # Wind
@@ -28,8 +29,11 @@ ENABLE_WIND = False
 MINIMUM_WIND_SPEED = 0 # m/s
 MAXIMUM_WIND_SPEED = 30 # m/s
 
+# Delay
+ENABLE_DELAY = False
+MAXIMUM_DELAY = 3 # s
+PROB_DELAY = 1
 
-NUMBER_INTRUDERS_STATE = 2
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
@@ -88,7 +92,8 @@ class Environment(gym.Env):
         
         # Get the random wind direction and intensity for this episode
         self.wind_magnitude = random.randint(MINIMUM_WIND_SPEED, MAXIMUM_WIND_SPEED)
-        self.wind_direction = random.randint(0, 359)
+        self.wind_direction = random.randint(0, 359)  
+ 
 
     def resolution(self, action: List) -> None:
         """
@@ -107,9 +112,10 @@ class Environment(gym.Env):
                 # heading, speed, climb
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
-                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
-                f.altitude = int(max(np.sign(action[it2][2]),0))
+                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3                
                 f.airspeed = max(min(f.airspeed , self.max_speed), self.min_speed) # limit airspeed to the limits
+                if self.use_altitude:
+                    f.altitude = int(max(np.sign(action[it2][2]),0))
 
                 it2 += 1
         # RDC: here you should implement your resolution actions
@@ -283,50 +289,52 @@ class Environment(gym.Env):
                         dx_all[i][j] = m.sin(float(bearing_all[i][j])) * cur_dis[i][j]
                         dy_all[i][j] = m.cos(float(bearing_all[i][j])) * cur_dis[i][j]
 
-                        altitude_all[i][j] = abs(self.flights[i].altitude - self.flights[j].altitude)
+                        if self.use_altitude:
+                            altitude_all[i][j] = abs(self.flights[i].altitude - self.flights[j].altitude)
 
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 observations = []
 
-                closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
+                closest_intruders = np.argsort(distance_all[i])[:self.number_intruders_state]
 
                 # distance to closest #NUMBER_INTRUDERS_STATE
                 observations += np.take(cur_dis[i], closest_intruders).tolist()
 
                 # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < NUMBER_INTRUDERS_STATE:
+                while len(observations) < self.number_intruders_state:
                     observations.append(MAX_DISTANCE)
                 
                 observations += np.take(distance_all[i], closest_intruders).tolist()
 
                 # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < 2*NUMBER_INTRUDERS_STATE:
+                while len(observations) < 2*self.number_intruders_state:
                     observations.append(0)
 
                 # relative bearing #NUMBER_INTRUDERS_STATE
                 observations += np.take(dx_all[i], closest_intruders).tolist()
 
                 # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < 3*NUMBER_INTRUDERS_STATE:
+                while len(observations) < 3*self.number_intruders_state:
                     observations.append(0)
 
                 observations += np.take(dy_all[i], closest_intruders).tolist()
 
                 # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
-                while len(observations) < 4*NUMBER_INTRUDERS_STATE:
+                while len(observations) < 4*self.number_intruders_state:
                     observations.append(0)
                                 
                 observations += np.take(trackdif_all[i], closest_intruders).tolist()
 
-                while len(observations) < 5*NUMBER_INTRUDERS_STATE:
+                while len(observations) < 5*self.number_intruders_state:
                     observations.append(0)
 
-                # altitude of the intruding aircraft
-                observations += np.take(altitude_all[i], closest_intruders).tolist()
+                if self.use_altitude:
+                    # altitude of the intruding aircraft
+                    observations += np.take(altitude_all[i], closest_intruders).tolist()
 
-                while len(observations) < 6*NUMBER_INTRUDERS_STATE:
-                    observations.append(0)
+                    while len(observations) < 6*self.number_intruders_state:
+                        observations.append(0)
                 
                 # current speed
                 observations.append(f.airspeed)
@@ -334,11 +342,9 @@ class Environment(gym.Env):
                 # optimal speed
                 observations.append(f.optimal_airspeed)
 
-                # # distance to target
-                # observations.append(f.position.distance(f.target)
-
-                # add current altitude
-                observations.append(f.altitude)
+                if self.use_altitude:
+                    # add current altitude
+                    observations.append(f.altitude)
 
                 # bearing to target
                 observations.append(m.sin(float(f.drift)))
@@ -412,6 +418,7 @@ class Environment(gym.Env):
         :param action: list of resolution actions assigned to each flight
         :return: observation, reward, done status and other information
         """
+   
         # apply resolution actions
         self.resolution(action)
 
@@ -453,7 +460,7 @@ class Environment(gym.Env):
 
         self.average_speed_dif = np.average(speed_dif)
 
-    def reset(self, number_flights_training) -> List:
+    def reset(self, number_flights_training, num_intruders_state, use_altitude) -> List:
         """
         Resets the environment and returns initial observation
         :return: initial observation
@@ -463,6 +470,9 @@ class Environment(gym.Env):
 
         # during training, the number of flights will increase from  1 to 10
         self.num_flights = number_flights_training
+
+        self.number_intruders_state = num_intruders_state
+        self.use_altitude = use_altitude
 
         # create random flights
         self.flights = []
