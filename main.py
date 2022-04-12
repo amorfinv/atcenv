@@ -25,7 +25,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=10000)
+    parser.add_argument('--episodes', type=int, default=cfg.NUMBER_EPISODES)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -38,9 +38,9 @@ if __name__ == "__main__":
     env_args['altitude'] = 0 # in meters
     env = Environment(**env_args)
 
-    number_of_aircraft = 10
+    number_of_aircraft = cfg.NUMBER_AIRCRAFT
     # enable using a secondary altitude level
-    use_altitude = True    
+    use_altitude = cfg.USE_ALTITUDE    
     if use_altitude:
         action_dim = 3 #heading, speed, altitude
         state_dim = 17
