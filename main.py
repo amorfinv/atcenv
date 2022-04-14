@@ -39,15 +39,19 @@ if __name__ == "__main__":
     env = Environment(**env_args)
 
     number_of_aircraft = cfg.NUMBER_AIRCRAFT
+
     # enable using a secondary altitude level
     use_altitude = cfg.USE_ALTITUDE    
+
+    num_intruders_state = cfg.NUMBER_INTRUDERS_STATE
+    
     if use_altitude:
         action_dim = 3 #heading, speed, altitude
-        state_dim = 17
+        state_dim = 5 + num_intruders_state * 6
     else:
         action_dim = 2 #heading, speed
-        state_dim = 14
-    num_intruders_state = 2
+        state_dim = 4 + num_intruders_state * 5
+    
     RL = MaSacAgent(number_of_aircraft, action_dim, state_dim, num_intruders_state, use_altitude)
 
     load_models = False
