@@ -3,7 +3,6 @@ Example
 """
 
 import numpy as np
-import tracemalloc
 
 if __name__ == "__main__":
     import random
@@ -17,6 +16,7 @@ if __name__ == "__main__":
     # RL model
     import atcenv.TempConfig as tc
     from atcenv.MASAC.masac_agent import MaSacAgent
+    from atcenv.CCSP.ccsp_agent import CCSPAgent
     import copy
 
     parser = ArgumentParser(
@@ -31,20 +31,19 @@ if __name__ == "__main__":
 
     # parse arguments
     args = parser.parse_args()
-    #tracemalloc.start()
 
     # init environment
     env_args = vars(args.env)
     env_args['altitude'] = 0 # in meters
     env = Environment(**env_args)
-
-    number_of_aircraft = cfg.NUMBER_AIRCRAFT
-
-    # enable using a secondary altitude level
-    use_altitude = cfg.USE_ALTITUDE    
-
-    num_intruders_state = cfg.NUMBER_INTRUDERS_STATE
     
+    # load settings
+    number_of_aircraft = cfg.NUMBER_AIRCRAFT
+    use_altitude = cfg.USE_ALTITUDE
+    num_intruders_state = cfg.NUMBER_INTRUDERS_STATE
+    load_models = cfg.LOAD_MODELS
+    test = cfg.TEST
+
     if use_altitude:
         action_dim = 3 #heading, speed, altitude
         state_dim = 5 + num_intruders_state * 6
@@ -52,22 +51,24 @@ if __name__ == "__main__":
         action_dim = 2 #heading, speed
         state_dim = 4 + num_intruders_state * 5
     
-    RL = MaSacAgent(number_of_aircraft, action_dim, state_dim, num_intruders_state, use_altitude)
-
-    load_models = False
-    test = False
+    if cfg.RL_MODEL == "MASAC":
+        RL = MaSacAgent(number_of_aircraft, action_dim, state_dim, num_intruders_state, use_altitude)
+    elif cfg.RL_MODEL == "CCSP":
+        RL = CCSPAgent(number_of_aircraft, action_dim, state_dim, num_intruders_state, use_altitude)
+    else:  
+        raise Exception("Please select one of the available models from 'settings.cfg'.")
 
     if load_models:
         RL.load_models()
-    # increase number of flights
+
     tot_rew_list = []
     conf_list = []
     speeddif_list = []
-    # run episodes
     state_list = []
+
     for e in tqdm(range(args.episodes)):   
         print('\n-----------------------------------------------------')
-        #snapshot1 = tracemalloc.take_snapshot()     
+    
         episode_name = "EPISODE_" + str(e) 
       
         obs = env.reset(number_of_aircraft, num_intruders_state, use_altitude)
@@ -78,7 +79,7 @@ if __name__ == "__main__":
 
         # save how many steps it took for this episode to finish
         number_steps_until_done = 0
-        # save how many conflics happened in eacj episode
+        # save how many conflics happened in each episode
         number_conflicts = 0
         # save different from optimal speed
         average_speed_dif = 0
@@ -86,15 +87,11 @@ if __name__ == "__main__":
         tot_rew = 0
         # execute one episode
         while not done:
-            #for obs_i in obs:
-            # print(obs_i)
+
             actions = RL.do_step(obs,env.max_speed, env.min_speed, test=test)
-                # actions.append((np.random.rand(2)-0.5)*2)
-                #actions.append([0,0])
 
             obs0 = copy.deepcopy(obs)
 
-            # perform step with dummy action
             obs, rew, done_t, done_e, info = env.step(actions)
 
             for obs_i in obs:
@@ -103,18 +100,26 @@ if __name__ == "__main__":
             if done_t or done_e:
                 done = True
 
-            #for obs_i in obs:
-            #    state_list.append(obs_i)
             tot_rew += rew
-            # train the RL model
-            #for it_obs in range(len(obs)):
-            while len(obs) < len(obs0):
-                obs.append( [0] * RL.statedim) # STATE_SIZE = 14
-            RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
-                # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
-            # comment render out for faster processing
-            # if e%10 == 0:
-            env.render()
+            
+            # Make sure that the state is filled,
+            # Different states are used for the different models due to the different Critics
+
+            if cfg.RL_MODEL == "MASAC":
+                while len(obs) < len(obs0):
+                    obs.append( [0] * RL.statedim)
+
+            elif cfg.RL_MODEL == "CCSP":
+                while len(obs) < number_of_aircraft and len(env.done) != number_of_aircraft and not test:
+                    i = np.random.randint(0,len(obs))
+                    obs = np.vstack((obs,obs[i]))
+
+            if not test:
+                RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
+
+            if cfg.RENDER:
+                if e%cfg.RENDER_FREQ == 0:
+                    env.render()
 
             number_steps_until_done += 1
             number_conflicts += len(env.conflicts)
@@ -128,13 +133,10 @@ if __name__ == "__main__":
             tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
             conf_list[e%100 -1] = number_conflicts
             speeddif_list[e%100 -1] = average_speed_dif
-        # save information
-        # if not test:
-        #     RL.learn() # train the model
+
         if e%100 == 0 and not test:
             RL.save_models()
-        #RL.episode_end(episode_name)
-        #np.savetxt('states.csv', state_list)
+
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
         tc.dump_pickle(average_speed_dif, 'results/save/speeddif_' + episode_name)
@@ -142,11 +144,5 @@ if __name__ == "__main__":
         print(f'Done aircraft IDs: {env.done}')      
 
         print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))        
-        #snapshot2 = tracemalloc.take_snapshot()
-        #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
 
-        #print("[ Top 10 differences ]")
-        #for stat in top_stats[:10]:
-        #    print(stat)
-        # close rendering
         env.close()
