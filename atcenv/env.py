@@ -86,7 +86,7 @@ class Environment(gym.Env):
         self.dt = dt
 
         # tolerance to consider that the target has been reached (in meters)
-        self.tol = self.max_speed * 1.05 * self.dt
+        self.tol = self.max_speed * 1.05 * self.dt * cfg.TOLERANCE
 
         # altitude of the airspace
         self.alt = kwargs['altitude']
