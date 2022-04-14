@@ -168,7 +168,7 @@ class MaSacAgent:
             t_param.data.copy_(TAU * l_param.data + (1.0 - TAU) * t_param.data)
 
     def normalizeState(self, s_t, max_speed, min_speed):
-         # distance to closest #NUMBER_INTRUDERS_STATE intruders
+        # distance to closest #NUMBER_INTRUDERS_STATE intruders
         for i in range(0, self.number_intruders_state):
             s_t[i] = (s_t[i]-MEANS[0])/(STDS[0]*2)
 
@@ -176,16 +176,19 @@ class MaSacAgent:
         for i in range(self.number_intruders_state, self.number_intruders_state*2):
             s_t[i] = (s_t[i]-MEANS[1])/(STDS[1]*2)
 
+        # current dy intruder (from ownship frame of reference)
         for i in range(self.number_intruders_state*2, self.number_intruders_state*3):
             s_t[i] = (s_t[i]-MEANS[2])/(STDS[2]*2)
         
+        # current dx intruder (from ownship frame of reference)
         for i in range(self.number_intruders_state*3, self.number_intruders_state*4):
             s_t[i] = (s_t[i]-MEANS[3])/(STDS[3]*2)
+        
+        # relative track with intruder
+        for i in range(self.number_intruders_state*4, self.number_intruders_state*5):
+            s_t[i] = (s_t[i])/(3.1415)
 
-        if self.use_altitude:
-            for i in range(self.number_intruders_state*4, self.number_intruders_state*5):
-                s_t[i] = (s_t[i])/(3.1415)
-            
+        if self.use_altitude:     
             # current speed
             s_t[self.number_intruders_state*6] = ((s_t[self.number_intruders_state*6]-min_speed)/(max_speed-min_speed))*2 - 1
             # optimal speed
@@ -199,8 +202,7 @@ class MaSacAgent:
             s_t[self.number_intruders_state*5] = ((s_t[self.number_intruders_state*5]-min_speed)/(max_speed-min_speed))*2 - 1
             # optimal speed
             s_t[self.number_intruders_state*5 + 1] = ((s_t[self.number_intruders_state*5 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
-            # # distance to target
-            # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
+            
             # # bearing to target
             s_t[self.number_intruders_state*5+2] = s_t[self.number_intruders_state*5+2]
             s_t[self.number_intruders_state*5+3] = s_t[self.number_intruders_state*5+3]
