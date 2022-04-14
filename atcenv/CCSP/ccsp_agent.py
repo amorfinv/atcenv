@@ -1,3 +1,18 @@
+"""
+CCSP Agent Class
+
+Based on MASAC Agent Class, Critic and Value network take the entire set of observations,
+and entire set of actions (Critic only), instead of just local observations.
+Reward per timestep is the global (summed) reward of the entire set of agents.
+
+Gradient for the actor network updates is taken with respect to the actions of all agents
+instead of the individual agents per step
+
+During training try to limit the number of agents in the environment to allow for faster training.
+Adjust the other environment parameters such as airspace size accordingly to not trivialize the problem.
+When testing the number of Agents can be scaled up as the Critic no longer is called.
+"""
+
 from math import gamma
 from typing import Dict, List, Tuple
 
@@ -13,26 +28,27 @@ from torch.nn.utils.clip_grad import clip_grad_norm_
 
 GAMMMA = 0.99
 TAU =5e-3
-INITIAL_RANDOM_STEPS = 100
-POLICY_UPDATE_FREQUENCE = 2
+INITIAL_RANDOM_STEPS = 0
+POLICY_UPDATE_FREQUENCE = 1
 
-BUFFER_SIZE = 1000000
+BUFFER_SIZE = 5000000
 BATCH_SIZE = 256
 
-LR_A = 3e-4
-LR_Q = 3e-4
+LR_A = 6e-5
+LR_Q = 6e-4
 
 MEANS = [57000,57000,0,0,0,0,0,0]
 STDS = [31500,31500,100000,100000,1,1,1,1]
 
-class MaSacAgent:
-    def __init__(self, num_agents, action_dim, state_dim, intruders_state, use_altitude):                
+class CCSPAgent:
+    def __init__(self, num_agents, action_dim, state_dim, intruders_state, use_altitude):
         self.statedim = state_dim
+        self.num_agents = num_agents
         self.actiondim = action_dim
         self.number_intruders_state = intruders_state
         self.use_altitude = use_altitude
 
-        self.memory = ReplayBuffer(self.statedim,self.actiondim, BUFFER_SIZE, BATCH_SIZE)
+        self.memory = ReplayBuffer(self.statedim, self.actiondim, self.num_agents, BUFFER_SIZE, BATCH_SIZE)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
@@ -42,32 +58,29 @@ class MaSacAgent:
 
         self.actor = Actor(self.statedim, self.actiondim).to(self.device)
 
-        self.vf = CriticV(self.statedim).to(self.device)
-        self.vf_target = CriticV(self.statedim).to(self.device)
+        self.vf = CriticV(self.statedim * self.num_agents).to(self.device)
+        self.vf_target = CriticV(self.statedim * self.num_agents).to(self.device)
         self.vf_target.load_state_dict(self.vf.state_dict())
 
-        self.qf1 = CriticQ(self.statedim + self.actiondim).to(self.device)
-        self.qf2 = CriticQ(self.statedim + self.actiondim).to(self.device)
+        self.qf1 = CriticQ(self.statedim * self.num_agents + self.actiondim * self.num_agents).to(self.device)
+        self.qf2 = CriticQ(self.statedim * self.num_agents + self.actiondim * self.num_agents).to(self.device)
 
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=LR_A)
         self.vf_optimizer = optim.Adam(self.vf.parameters(), lr=LR_Q)
         self.qf1_optimizer = optim.Adam(self.qf1.parameters(), lr=LR_Q)
         self.qf2_optimizer = optim.Adam(self.qf2.parameters(), lr=LR_Q)
 
-        self.transition = [[] for i in range(num_agents)]
+        self.transition = []
 
         self.total_step = 0
 
         self.is_test = False
         
-        if self.device.type == 'cpu':
-            print('DEVICE USED', self.device.type)
-        else:
-            print('DEVICE USED', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
-
+        print('DEVICE USED', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
+    
     def do_step(self, state, max_speed, min_speed, test = False, batch = False):
 
-        if not test and self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:
+        if self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:
             selected_action = np.random.uniform(-1, 1, (len(state), self.actiondim))
         else:
             selected_action = []
@@ -81,10 +94,9 @@ class MaSacAgent:
         return selected_action.tolist()
     
     def setResult(self,episode_name, state, new_state, reward, action, done):       
-        if not self.is_test:
-            for i in range(len(state)):               
-                self.transition[i] = [state[i], action[i], reward, new_state[i], done]
-                self.memory.store(*self.transition[i])
+        if not self.is_test:       
+            self.transition = [state, action, reward, new_state, done]
+            self.memory.store(*self.transition)
 
         if (len(self.memory) >  BATCH_SIZE and self.total_step > INITIAL_RANDOM_STEPS):
             self.update_model()
@@ -93,12 +105,21 @@ class MaSacAgent:
         device = self.device
 
         samples = self.memory.sample_batch()
+
         state = torch.FloatTensor(samples["obs"]).to(device)
         next_state = torch.FloatTensor(samples["next_obs"]).to(device)
-        action = torch.FloatTensor(samples["acts"].reshape(-1, self.actiondim)).to(device)
+        action = torch.FloatTensor(samples["acts"]).to(device)
         reward = torch.FloatTensor(samples["rews"].reshape(-1,1)).to(device)
         done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
         new_action, log_prob = self.actor(state)
+
+        # reshape the tensors from 3D (batch,statedim,n_agents) to 2D for centralized Critic and Value Network
+        q_state = torch.reshape(state,(BATCH_SIZE,self.statedim*self.num_agents))
+        q_next_state = torch.reshape(next_state,(BATCH_SIZE,self.statedim*self.num_agents))
+        q_action = torch.reshape(action,(BATCH_SIZE,self.actiondim*self.num_agents))
+        q_new_action = torch.reshape(new_action,(BATCH_SIZE,self.actiondim*self.num_agents))
+        q_log_prob = torch.mean(log_prob,1)
+
 
         alpha_loss = ( -self.log_alpha.exp() * (log_prob + self.target_alpha).detach()).mean()
 
@@ -109,24 +130,27 @@ class MaSacAgent:
         alpha = self.log_alpha.exp()
 
         mask = 1 - done
-        q1_pred = self.qf1(state, action)
-        q2_pred = self.qf2(state, action)
-        vf_target = self.vf_target(next_state)
+        q1_pred = self.qf1(q_state, q_action)
+        q2_pred = self.qf2(q_state, q_action)
+        vf_target = self.vf_target(q_next_state)
         q_target = reward + GAMMMA * vf_target * mask
         qf1_loss = F.mse_loss(q_target.detach(), q1_pred)
         qf2_loss = F.mse_loss(q_target.detach(), q2_pred)
 
-        v_pred = self.vf(state)
+        v_pred = self.vf(q_state)
         q_pred = torch.min(
-            self.qf1(state, new_action), self.qf2(state, new_action)
+            self.qf1(q_state, q_new_action), self.qf2(q_state, q_new_action)
         )
-        v_target = q_pred - alpha * log_prob
+        v_target = q_pred - alpha * q_log_prob
         v_loss = F.mse_loss(v_pred, v_target.detach())
 
         if self.total_step % POLICY_UPDATE_FREQUENCE== 0:
             advantage = q_pred - v_pred.detach()
-            actor_loss = (alpha * log_prob - advantage).mean()
+            actor_loss = (alpha * q_log_prob - advantage).mean()
 
+            # because advantage & q_log_prob are calculated with the entire set of actions
+            # instead of local, this gradient calculates the gradient for the weights that
+            # best influences the entire action space instead of local actions.
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             self.actor_optimizer.step()
@@ -150,19 +174,19 @@ class MaSacAgent:
 
         return actor_loss.data, qf_loss.data, v_loss.data, alpha_loss.data
     
-    def save_models(self):
-        torch.save(self.actor.state_dict(), "results/mactor.pt")
-        torch.save(self.qf1.state_dict(), "results/mqf1.pt")
-        torch.save(self.qf2.state_dict(), "results/mqf2.pt")
-        torch.save(self.vf.state_dict(), "results/mvf.pt")       
-
     def load_models(self):
-        # The models were trained on a CUDA device
-        # If you are running on a CPU-only machine, use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.
-        self.actor.load_state_dict(torch.load("results/mactor.pt", map_location=torch.device('cpu')))
-        self.qf1.load_state_dict(torch.load("results/mqf1.pt", map_location=torch.device('cpu')))
-        self.qf2.load_state_dict(torch.load("results/mqf2.pt", map_location=torch.device('cpu')))
-        self.vf.load_state_dict(torch.load("results/mvf.pt", map_location=torch.device('cpu')))
+        self.actor.load_state_dict(torch.load("results/ccspactor.pt"))
+        self.qf1.load_state_dict(torch.load("results/ccspqf1.pt"))
+        self.qf2.load_state_dict(torch.load("results/ccspqf2.pt"))
+        self.vf.load_state_dict(torch.load("results/ccspvf.pt"))
+        self.vf_target.load_state_dict(torch.load("results/ccspvft.pt"))
+
+    def save_models(self):
+        torch.save(self.actor.state_dict(), "results/ccspactor.pt")
+        torch.save(self.qf1.state_dict(), "results/ccspqf1.pt")
+        torch.save(self.qf2.state_dict(), "results/ccspqf2.pt")
+        torch.save(self.vf.state_dict(), "results/ccspvf.pt")       
+        torch.save(self.vf_target.state_dict(), "results/ccspvft.pt")
     
     def _target_soft_update(self):
         for t_param, l_param in zip(
