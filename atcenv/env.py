@@ -39,14 +39,20 @@ NUMBER_INTRUDERS_STATE = cfg.NUMBER_INTRUDERS_STATE # number of intruder states
 MAX_DISTANCE = cfg.MAX_DISTANCE # meters
 MAX_BEARING = cfg.MAX_BEARING # radians
 
+HEADING_CHANGE = cfg.HEADING_CHANGE
+SPEED_CHANGE = cfg.SPEED_CHANGE
+
+MAX_AREA = cfg.MAX_AREA
+MIN_AREA = cfg.MIN_AREA
+
 class Environment(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     def __init__(self,
                  num_flights: int = 1,
                  dt: float = 5.,
-                 max_area: Optional[float] = 200. * 200.,
-                 min_area: Optional[float] = 125. * 125.,
+                 max_area: Optional[float] = MAX_AREA * MAX_AREA,
+                 min_area: Optional[float] = MIN_AREA * MIN_AREA,
                  max_speed: Optional[float] = 500.,
                  min_speed: Optional[float] = 400,
                  max_episode_len: Optional[int] = 300,
@@ -112,9 +118,9 @@ class Environment(gym.Env):
 
             if i not in self.done:
                 # heading, speed, climb
-                new_track = f.track + action[it2][0] * MAX_BEARING/8
+                new_track = f.track + action[it2][0] * HEADING_CHANGE
                 f.track = (new_track + u.circle) % u.circle
-                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3                
+                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) * SPEED_CHANGE              
                 f.airspeed = max(min(f.airspeed , self.max_speed), self.min_speed) # limit airspeed to the limits
                 if self.use_altitude:
                     f.altitude = int(max(np.sign(action[it2][2]),0))
