@@ -76,7 +76,10 @@ class CCSPAgent:
 
         self.is_test = False
         
-        print('DEVICE USED', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
+        if self.device.type == 'cpu':
+            print('DEVICE USED', self.device.type)
+        else:
+            print('DEVICE USED', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
     
     def do_step(self, state, max_speed, min_speed, test = False, batch = False):
 
